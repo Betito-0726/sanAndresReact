@@ -78,6 +78,7 @@ const MOCK_DATA = {
         { id_usuario: 5, login: 'adm.rios', email: 'mario.rios@clinica.com', password: 'password', nombre: 'Mario', apellido: 'Ríos', telefono: '555-0105', privilegios: 'Administrativo', id_hospital: 1 },
         { id_usuario: 6, login: 'dr.perez', email: 'roberto.perez@clinica.com', password: 'password', nombre: 'Roberto', apellido: 'Perez', telefono: '555-0106', privilegios: 'Medico', id_hospital: 1 },
         { id_usuario: 7, login: 'dr.gomez', email: 'luis.gomez@clinica.com', password: 'password', nombre: 'Luis', apellido: 'Gómez', telefono: '555-0107', privilegios: 'Medico', id_hospital: 1 },
+        { id_usuario: 7, login: 'beto', email: 'beto@clinica.com', password: 'beto', nombre: 'Beto', apellido: 'SB', telefono: '555-0107', privilegios: 'Admin', id_hospital: 1 },
     ],
     // Corresponds to 'medicos' table, linking to 'usuarios'
     medicos: [
