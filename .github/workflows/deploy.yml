@@ -1,0 +1,49 @@
+# Nombre del flujo de trabajo que verás en la pestaña "Actions" de GitHub
+name: Deploy to HostPapa
+
+# Disparador: Este flujo se ejecutará cada vez que subas cambios a la rama "main"
+on:
+  push:
+    branches:
+      - main
+
+# Tareas a ejecutar
+jobs:
+  build-and-deploy:
+    # Usamos la última versión de Ubuntu como sistema operativo virtual
+    runs-on: ubuntu-latest
+
+    # Pasos que se ejecutarán en orden
+    steps:
+      # 1. Descarga el código de tu repositorio
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. Configura el entorno de Node.js para poder usar npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Puedes usar la versión de Node que prefieras
+
+      # 3. Instala todas las dependencias del proyecto (React, Tailwind, etc.)
+      - name: Install dependencies
+        run: npm install
+
+      # 4. Construye la aplicación para producción. Esto crea la carpeta `dist` con los archivos optimizados.
+      - name: Build project
+        run: npm run build
+
+      # 5. Sube los archivos de la carpeta `dist` a tu servidor de HostPapa usando FTP
+      - name: Deploy to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          # Dirección del servidor FTP (guardada de forma segura)
+          server: ${{ secrets.FTP_SERVER }}
+          # Nombre de usuario de FTP (guardado de forma segura)
+          username: ${{ secrets.FTP_USERNAME }}
+          # Contraseña de FTP (guardada de forma segura)
+          password: ${{ secrets.FTP_PASSWORD }}
+          # Carpeta local que se va a subir (la que se genera con `npm run build`)
+          local-dir: ./dist/
+          # Carpeta remota en el servidor donde se subirán los archivos (¡ESTA ES LA LÍNEA NUEVA!)
+          server-dir: ./public_html/
