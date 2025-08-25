@@ -59,6 +59,49 @@ const formatMedicoName = (medicoUser) => {
     return `${prefix} ${fullName}`;
 };
 
+/**
+ * Opens a new browser tab with the provided HTML content for printing.
+ * @param {string} htmlContent - The inner HTML of the component to print.
+ * @param {string} title - The title for the new browser tab.
+ */
+const openPrintView = (htmlContent, title) => {
+    const printHtml = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${title}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                body {
+                    font-family: 'Inter', sans-serif;
+                }
+                @media print {
+                    body { 
+                        -webkit-print-color-adjust: exact; 
+                        print-color-adjust: exact;
+                    }
+                }
+            </style>
+        </head>
+        <body class="bg-white">
+            ${htmlContent}
+        </body>
+        </html>
+    `;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(printHtml);
+        printWindow.document.close();
+    } else {
+        alert("No se pudo abrir la ventana de impresión. Por favor, deshabilite el bloqueador de pop-ups de su navegador.");
+    }
+};
+
+
 // --- MOCK DATA (Simulated Database) ---
 const MOCK_DATA = {
     // ... (User data remains the same)
@@ -857,74 +900,1185 @@ placeholder="Buscar por nombre..."
 value={searchTerm}
 onChange={(e)=>{setSearchTerm(e.target.value);setCurrentPage(1)}}
 className="block w-full pl-10 pr-3 py-2 border-none bg-slate-100 rounded-lg shadow-[inset_3px_3px_7px_#d1d9e6,inset_-3px_-3px_7px_#ffffff]"/></div></div><div className="overflow-x-auto"><table className="min-w-full"><thead><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Apellidos</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Login</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rol</th><th className="relative px-6 py-3"><span className="sr-only">Acciones</span></th></tr></thead><tbody className="divide-y divide-slate-200/80">{loading?(Array.from({length:5}).map((_,i)=>(<tr key={i}><td className="px-6 py-4"><SkeletonLoader className="h-4 w-32"/></td><td className="px-6 py-4"><SkeletonLoader className="h-4 w-32"/></td><td className="px-6 py-4"><SkeletonLoader className="h-4 w-24"/></td><td className="px-6 py-4"><SkeletonLoader className="h-4 w-20"/></td><td className="px-6 py-4"><SkeletonLoader className="h-4 w-12"/></td></tr>))):(currentItems.map(user=>(<tr key={user.id_usuario}><td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.nombre}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.apellido}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.login}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.privilegios}</td><td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={()=>handleOpenModal(user)}className="text-blue-600 hover:text-blue-900 transition-colors duration-200">Editar</button></td></tr>)))}</tbody></table></div><div className="py-3 flex items-center justify-between border-t border-slate-200/80 mt-4"><div className="flex-1 flex justify-between sm:hidden"><Button onClick={()=>setCurrentPage(p=>p-1)}disabled={currentPage===1}>Anterior</Button><Button onClick={()=>setCurrentPage(p=>p+1)}disabled={currentPage===totalPages}>Siguiente</Button></div><div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between"><div><p className="text-sm text-gray-700">Mostrando<span className="font-medium">{indexOfFirstItem+1}</span>a<span className="font-medium">{Math.min(indexOfLastItem,filteredUsuarios.length)}</span>de<span className="font-medium">{filteredUsuarios.length}</span>resultados</p></div><div><nav className="relative z-0 inline-flex rounded-md -space-x-px"><Button variant="secondary" onClick={()=>setCurrentPage(p=>p-1)}disabled={currentPage===1}className="!rounded-l-full !rounded-r-none">Anterior</Button><Button variant="secondary" onClick={()=>setCurrentPage(p=>p+1)}disabled={currentPage===totalPages}className="!rounded-r-full !rounded-l-none">Siguiente</Button></nav></div></div></div></Card></div>)};
-const NotaIngresoPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[formData,setFormData]=useState({signosVitales:{TA:'',FC:'',FR:'',Temp:'',SatO2:''},interrogatorio:'',exploracionFisica:'',planTratamiento:''});const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);if(procData.resumen_ingreso&&typeof procData.resumen_ingreso==='object'){setFormData({signosVitales:procData.resumen_ingreso.signosVitales||{TA:'',FC:'',FR:'',Temp:'',SatO2:''},interrogatorio:procData.resumen_ingreso.interrogatorio||'',exploracionFisica:procData.resumen_ingreso.exploracionFisica||'',planTratamiento:procData.resumen_ingreso.planTratamiento||''})}}},[procedureId]);const handleChange=(e)=>{const{name,value}=e.target;const vitalSignsKeys=['TA','FC','FR','Temp','SatO2'];if(vitalSignsKeys.includes(name)){setFormData(prev=>({...prev,signosVitales:{...prev.signosVitales,[name]:value}}))}else{setFormData(prev=>({...prev,[name]:value}))}};const handleSave=async(e)=>{e.preventDefault();const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index].resumen_ingreso=formData}
-try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Nota_Ingreso_${patient.nombre}_${patient.apellido}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!procedure||!patient){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-return(<div>{}<div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}className="p-8 bg-white text-black font-sans"><div className="flex justify-between items-start pb-4 border-b border-gray-300"><div><h1 className="text-2xl font-bold text-gray-800">Clínica SIC</h1><p className="text-sm text-gray-600">Dirección de la Clínica,Cancún,Q.Roo</p></div><div className="text-right text-sm text-gray-600"><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha:</strong>{fechaCastellano(new Date())}</p></div></div><h2 className="text-xl font-bold text-center my-6 text-gray-800">Nota de Ingreso</h2><div className="space-y-4 text-sm"><p><strong>Diagnóstico:</strong>{procedure.diagnostico}</p><p><strong>Procedimiento Planeado:</strong>{procedure.qx_planeada}</p><div className="mt-4 pt-4 border-t border-gray-200"><h3 className="font-bold mb-2 text-gray-700">Signos Vitales</h3><p>TA:{formData.signosVitales.TA}mmHg|FC:{formData.signosVitales.FC}lpm|FR:{formData.signosVitales.FR}rpm|Temp:{formData.signosVitales.Temp}°C|SatO2:{formData.signosVitales.SatO2}%</p></div><div className="mt-4 pt-4 border-t border-gray-200"><h3 className="font-bold mb-2 text-gray-700">Resumen del Interrogatorio</h3><p className="whitespace-pre-wrap">{formData.interrogatorio}</p></div><div className="mt-4 pt-4 border-t border-gray-200"><h3 className="font-bold mb-2 text-gray-700">Exploración Física</h3><p className="whitespace-pre-wrap">{formData.exploracionFisica}</p></div><div className="mt-4 pt-4 border-t border-gray-200"><h3 className="font-bold mb-2 text-gray-700">Plan de Tratamiento</h3><p className="whitespace-pre-wrap">{formData.planTratamiento}</p></div></div></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota de Ingreso</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Detalles</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input name="diagnostico" label="Diagnóstico" value={procedure.diagnostico}disabled/><Input name="qx_planeada" label="Procedimiento Planeado" value={procedure.qx_planeada}disabled/></div><fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales</legend><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2"><Input name="TA" label="TA (mmHg)" value={formData.signosVitales.TA}onChange={handleChange}/><Input name="FC" label="FC (lpm)" value={formData.signosVitales.FC}onChange={handleChange}/><Input name="FR" label="FR (rpm)" value={formData.signosVitales.FR}onChange={handleChange}/><Input name="Temp" label="Temp (°C)" value={formData.signosVitales.Temp}onChange={handleChange}/><Input name="SatO2" label="SatO2 (%)" value={formData.signosVitales.SatO2}onChange={handleChange}/></div></fieldset><Textarea name="interrogatorio" label="Resumen del Interrogatorio" value={formData.interrogatorio}onChange={handleChange}rows={5}/><Textarea name="exploracionFisica" label="Exploración Física" value={formData.exploracionFisica}onChange={handleChange}rows={5}/><Textarea name="planTratamiento" label="Plan de Tratamiento" value={formData.planTratamiento}onChange={handleChange}rows={3}/></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!scriptsLoaded}>{scriptsLoaded?'Guardar y Generar PDF':'Cargando...'}</Button></div></form></Card></div>)};
-const ConsentimientoQuirurgicoPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[cirujano,setCirujano]=useState(null);const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);const cirujanoData=MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.id_medico);setCirujano(cirujanoData)}},[procedureId]);const handleGeneratePdf=async()=>{try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Consentimiento_Quirurgico_${patient.nombre}_${patient.apellido}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!procedure||!patient||!cirujano){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-const ConsentimientoContent=({isPdf=!1})=>(<div className={`${isPdf ? 'p-8 bg-white text-black font-sans' : 'p-2'}`}><div className={`flex justify-between items-start pb-4 ${isPdf ? 'border-b border-gray-300' : ''}`}><div><h1 className={`${isPdf ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800`}>Clínica SIC</h1><p className={`${isPdf ? 'text-sm' : ''} text-gray-600`}>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className={`${isPdf ? 'text-sm' : ''} text-right text-gray-600`}><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha:</strong>{fechaCastellano(new Date())}</p></div></div><h2 className={`${isPdf ? 'text-xl' : 'text-2xl'} font-bold text-center my-6 text-gray-800`}>Consentimiento Informado Quirúrgico</h2><div className="space-y-4 text-sm text-gray-700 leading-relaxed"><p className="text-xs text-gray-500 text-justify">Fundamentos:Reglamento de la Ley General de Salud en materia de prestación de servicios de atención médica;artículo 80,81,82 y 83;Norma Oficial Mexicana,NOM-004-SSA3-2012,del expediente clínico,numerales 4.2,10.1,10.1.2,10.1.3,10.1.2.3 y NOM 006-SSA3-2011.</p><p><strong>Yo como paciente(),Familiar(),Tutor()o Representante Legal()</strong></p><p><strong>Nombre:</strong>_________________________________________________________________</p><p>Manifiesto mi libre voluntad para autorizar los procedimientos diagnósticos,terapéuticos y quirúrgicos que se me indiquen después de haber recibido y entendido la información suficiente,clara,oportuna y veraz sobre mi enfermedad y estado actual;además de los beneficios,riesgos y posibles complicaciones y secuelas inherentes.</p><p>Se me han comunicado las alternativas existentes y disponibles,el derecho a cambio de mi decisión en cualquier momento antes del procedimiento o intervención.Me comprometo a proporcionar información completa y veraz,así como seguir las indicaciones médicas con el propósito de que mi atención sea adecuada.Otorgo mi autorización al personal de salud para la atención de contingencias y urgencias derivadas del acto médico-quirúrgico señalado,atendiendo al principio de libertad prescriptiva.</p><p>Se me han explicado a detalle todos los<strong>beneficios</strong>y<strong>posibles riesgos</strong>relacionados con su realización que a continuación se mencionan:</p><div className="pl-4"><p><strong className="font-semibold">Riesgos:</strong>{procedure.riesgos||'No especificados.'}</p><p><strong className="font-semibold">Beneficios:</strong>{procedure.beneficios||'No especificados.'}</p></div><p><strong>Otorgo mi consentimiento</strong>para que se me administre el tipo de anestesia que por mi particular estado de salud y tipo de cirugía a la que seré sometido,se me practiquen de ser necesarios,los procedimientos de monitoreo invasivos intraoperatorios pertinentes(colocación de sondas,catéter venoso central,canalización de línea arterial).</p><div className="mt-6 pt-4 border-t"><p><strong>Diagnóstico:</strong>{procedure.diagnostico}</p><p><strong>Procedimiento Proyectado:</strong>{procedure.qx_planeada}</p></div><div className="mt-20 flex justify-around text-center"><div className="w-1/2"><div className="border-t border-gray-400 pt-2"><p>Paciente,Familiar o Representante Legal</p></div></div><div className="w-1/2"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(cirujano)}</p></div></div></div></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><ConsentimientoContent isPdf={!0}/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Consentimiento Quirúrgico</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Detalles</Button></div><Card><ConsentimientoContent/><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="button" onClick={handleGeneratePdf} disabled={!scriptsLoaded}>{scriptsLoaded?'Generar PDF y Volver':'Cargando...'}</Button></div></Card></div>)};
-const ConsentimientoAnestesicoPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[anestesiologo,setAnestesiologo]=useState(null);const pdfRef=useRef(null);useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);const anestesiologoData=MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.qx_anestesiologo);setAnestesiologo(anestesiologoData)}},[procedureId]);const handleGeneratePdf=async()=>{try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Consentimiento_Anestesico_${patient.nombre}_${patient.apellido}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!procedure||!patient||!anestesiologo){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-const ConsentimientoContent=({isPdf=!1})=>(<div className={`${isPdf ? 'p-8 bg-white text-black font-sans' : 'p-2'}`}><div className={`flex justify-between items-start pb-4 ${isPdf ? 'border-b border-gray-300' : ''}`}><div><h1 className={`${isPdf ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800`}>Clínica SIC</h1><p className={`${isPdf ? 'text-sm' : ''} text-gray-600`}>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className={`${isPdf ? 'text-sm' : ''} text-right text-gray-600`}><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha:</strong>{fechaCastellano(new Date())}</p></div></div><h2 className={`${isPdf ? 'text-xl' : 'text-2xl'} font-bold text-center my-6 text-gray-800`}>Consentimiento Informado para Anestesia</h2><div className="space-y-4 text-sm text-gray-700 leading-relaxed"><p className="text-xs text-gray-500 text-justify">Fundamentos:Reglamento de la Ley General de Salud en materia de prestación de servicios de atención médica;artículo 80,81,82 y 83;Norma Oficial Mexicana,NOM-004-SSA3-2012,del expediente clínico,numerales 4.2,10.1,10.1.2,10.1.3,10.1.2.3 y NOM 006-SSA3-2011.</p><p><strong>Yo como paciente(),Familiar(),Tutor()o Representante Legal()</strong></p><p><strong>Nombre:</strong>_________________________________________________________________</p><p>Expreso mi libre voluntad para autorizar se me realice el procedimiento anestésico y/o analgésico requerido.</p><p>Se me ha explicado de forma clara y con lenguaje sencillo todo lo que a continuación se detalla en lenguaje técnico.He comprendido satisfactoriamente la naturaleza y propósito de la técnica de anestesia a la que me debo someter a efectos de ser intervenido quirúrgicamente,así como la probabilidad de cambio de técnica durante el mismo procedimiento quirúrgico si fuese necesario.Se me ha dado la oportunidad de discutir,preguntar y aclarar todas mis dudas sobre riesgos,beneficios y alternativas relacionadas con la anestesia y su técnica requerida,y aclaro que todas ellas han sido abordadas de manera satisfactoria.</p><p><strong className="font-semibold">Riesgos:</strong>Se me han explicado los posibles riesgos,incluyendo pero no limitado a:lesiones en la vía aérea,efectos adversos a medicamentos,cefalea,lesiones nerviosas,paro cardiorrespiratorio y muerte.</p><div className="mt-6 pt-4 border-t"><p><strong>Diagnóstico:</strong>{procedure.diagnostico}</p><p><strong>Procedimiento Proyectado:</strong>{procedure.qx_planeada}</p></div><div className="mt-20 space-y-10 text-center"><div className="flex justify-around"><div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>Paciente,Familiar o Representante Legal</p></div></div><div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>Testigo</p></div></div></div><div className="flex justify-around"><div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>{formatMedicoName(anestesiologo)}</p></div></div><div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>Testigo</p></div></div></div></div></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><ConsentimientoContent isPdf={!0}/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Consentimiento Anestésico</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Detalles</Button></div><Card><ConsentimientoContent/><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="button" onClick={handleGeneratePdf} disabled={!scriptsLoaded}>{scriptsLoaded?'Generar PDF y Volver':'Cargando...'}</Button></div></Card></div>)};
-const NotaPreanestesicaPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[formData,setFormData]=useState(null);const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);const initialData=JSON.parse(JSON.stringify(procData.notaPreanestesica||{}));const defaults={antecedentes:{tabaquismo:'',alcoholismo:'',toxicomanias:'',ejercicio:'',asma:'',alergias:'',cardiovascular:'',pulmonar:'',endocrinologico:'',antecedentes_anestesicos:'',antecedentes_quirurgicos:''},exploracion:{peso:'',talla:'',TA:'',FC:'',FR:'',Temp:'',SatO2:'',tegumentos:'',cabeza:'',traquea:'',CP:'',cardio:'',extremidades:''},viaAerea:{mallampati:'',aldreti:'',bellhouseDore:'',interincisiva:'',outras:''},laboratorio:{hb:'',hct:'',leucos:'',plaquetas:'',glucosa:'',creatinina:'',bun:'',urea:'',tp:'',ttp:'',inr:''},ekg:'',planAnestesico:{valoraciones:'',plan:'',indicaciones:''}};for(const section in defaults){if(typeof defaults[section]==='object'&&defaults[section]!==null&&!Array.isArray(defaults[section])){initialData[section]={...defaults[section],...(initialData[section]||{})}}else{if(typeof initialData[section]==='undefined'){initialData[section]=defaults[section]}}}
-setFormData(initialData)}},[procedureId]);const handleChange=(e)=>{const{name,value,dataset}=e.target;const{section,field}=dataset;setFormData(prev=>{const newFormData={...prev};if(section){newFormData[section]={...newFormData[section],[field]:value}}else{newFormData[name]=value}
-return newFormData})};const handleSave=async(e)=>{e.preventDefault();const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index].notaPreanestesica=formData}
-try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,logging:false,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Nota_Preanestesica_${patient.nombre}_${patient.apellido}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!formData||!patient||!procedure){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-const PdfContent=()=>(<div className="p-8 bg-white text-black font-sans text-xs"><div className="flex justify-between items-start pb-4 border-b border-gray-300"><div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className="text-right"><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha:</strong>{fechaCastellano(new Date())}</p></div></div><h2 className="text-lg font-bold text-center my-4">Nota de Valoración Pre-Anestésica</h2><div className="space-y-3"><p><strong>Diagnóstico:</strong>{procedure.diagnostico}</p><p><strong>Procedimiento Planeado:</strong>{procedure.qx_planeada}</p><h3 className="font-bold pt-2 border-t mt-2">Antecedentes</h3><p><strong>Alergias:</strong>{formData.antecedentes.alergias}</p><p><strong>Cardiovascular:</strong>{formData.antecedentes.cardiovascular}</p><p><strong>Anestésicos Previos:</strong>{formData.antecedentes.antecedentes_anestesicos}</p><p><strong>Quirúrgicos Previos:</strong>{formData.antecedentes.antecedentes_quirurgicos}</p><h3 className="font-bold pt-2 border-t mt-2">Exploración Física</h3><p><strong>Peso:</strong>{formData.exploracion.peso}kg,<strong>Talla:</strong>{formData.exploracion.talla}cm</p><p><strong>Signos Vitales:</strong>TA:{formData.exploracion.TA},FC:{formData.exploracion.FC},FR:{formData.exploracion.FR},Temp:{formData.exploracion.Temp},SatO2:{formData.exploracion.SatO2}</p><h3 className="font-bold pt-2 border-t mt-2">Vía Aérea</h3><p><strong>Mallampati:</strong>{formData.viaAerea.mallampati},<strong>Aldreti:</strong>{formData.viaAerea.aldreti},<strong>Bellhouse-Dore:</strong>{formData.viaAerea.bellhouseDore},<strong>Interincisiva:</strong>{formData.viaAerea.interincisiva}cm</p><h3 className="font-bold pt-2 border-t mt-2">Laboratorio y Gabinete</h3><p><strong>Hb:</strong>{formData.laboratorio.hb},<strong>Hct:</strong>{formData.laboratorio.hct},<strong>Plaquetas:</strong>{formData.laboratorio.plaquetas},<strong>Glucosa:</strong>{formData.laboratorio.glucosa},<strong>TP:</strong>{formData.laboratorio.tp},<strong>TTP:</strong>{formData.laboratorio.ttp}</p><p><strong>EKG:</strong>{formData.ekg}</p><h3 className="font-bold pt-2 border-t mt-2">Plan Anestésico</h3><p><strong>Valoraciones:</strong>{formData.planAnestesico.valoraciones}</p><p><strong>Plan:</strong>{formData.planAnestesico.plan}</p><p><strong>Indicaciones:</strong>{formData.planAnestesico.indicaciones}</p></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><PdfContent/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Preanestésica</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Detalles</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-6">{}<fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-base font-medium text-gray-900 px-2">Antecedentes</legend><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">{Object.entries(formData.antecedentes).map(([key,value])=>(<Input key={key}id={`ant-${key}`}label={key.replace(/_/g,' ').replace(/\b\w/g,l=>l.toUpperCase())}data-section="antecedentes" data-field={key}value={value}onChange={handleChange}/>))}</div></fieldset>{}<fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-base font-medium text-gray-900 px-2">Exploración Física</legend><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">{Object.entries(formData.exploracion).map(([key,value])=>(<Input key={key}id={`exp-${key}`}label={key.toUpperCase()}data-section="exploracion" data-field={key}value={value}onChange={handleChange}/>))}</div></fieldset>{}<fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-base font-medium text-gray-900 px-2">Vía Aérea</legend><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-2">{Object.entries(formData.viaAerea).map(([key,value])=>(<Input key={key}id={`via-${key}`}label={key.charAt(0).toUpperCase()+key.slice(1)}data-section="viaAerea" data-field={key}value={value}onChange={handleChange}/>))}</div></fieldset>{}<fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-base font-medium text-gray-900 px-2">Laboratorio</legend><div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-2">{Object.entries(formData.laboratorio).map(([key,value])=>(<Input key={key}id={`lab-${key}`}label={key.toUpperCase()}data-section="laboratorio" data-field={key}value={value}onChange={handleChange}/>))}</div></fieldset><Textarea name="ekg" label="EKG" value={formData.ekg}onChange={handleChange}rows={2}/>{}<fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-base font-medium text-gray-900 px-2">Plan Anestésico</legend><div className="space-y-4 mt-2"><Textarea id="plan-val" label="Valoraciones" data-section="planAnestesico" data-field="valoraciones" value={formData.planAnestesico.valoraciones}onChange={handleChange}rows={2}/><Textarea id="plan-plan" label="Plan" data-section="planAnestesico" data-field="plan" value={formData.planAnestesico.plan}onChange={handleChange}rows={3}/><Textarea id="plan-ind" label="Indicaciones" data-section="planAnestesico" data-field="indicaciones" value={formData.planAnestesico.indicaciones}onChange={handleChange}rows={2}/></div></fieldset></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!scriptsLoaded}>{scriptsLoaded?'Guardar y Generar PDF':'Cargando...'}</Button></div></form></Card></div>)};
-const NotaPostanestesicaPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[formData,setFormData]=useState(null);const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);const initialData=JSON.parse(JSON.stringify(procData.notaPostanestesica||{}));const defaults={tecnica_anestesica:'',liquidos:'',inicio_anestesia:'',termino_anestesia:'',inicio_cirugia:'',termino_cirugia:'',signosVitalesIngresoUCPA:{TA:'',FC:'',FR:'',Temp:'',SatO2:''},signosVitalesAltaUCPA:{TA:'',FC:'',FR:'',Temp:'',SatO2:''},signosVitalesAltaAnestesio:{TA:'',FC:'',FR:'',Temp:'',SatO2:''},indicaciones_altaAnestesio:''};const mergedData={...defaults,...initialData};mergedData.signosVitalesIngresoUCPA={...defaults.signosVitalesIngresoUCPA,...initialData.signosVitalesIngresoUCPA};mergedData.signosVitalesAltaUCPA={...defaults.signosVitalesAltaUCPA,...initialData.signosVitalesAltaUCPA};mergedData.signosVitalesAltaAnestesio={...defaults.signosVitalesAltaAnestesio,...initialData.signosVitalesAltaAnestesio};setFormData(mergedData)}},[procedureId]);const handleChange=(e)=>{const{name,value,dataset}=e.target;const{section}=dataset;setFormData(prev=>{const newFormData={...prev};if(section){newFormData[section]={...newFormData[section],[name]:value}}else{newFormData[name]=value}
-return newFormData})};const handleSave=async(e)=>{e.preventDefault();const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index].notaPostanestesica=formData}
-try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;if(!input){console.error("PDF content element not found.");return}
-const canvas=await html2canvas(input,{scale:2,logging:false,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Nota_Postanestesica_${patient.nombre}_${patient.apellido}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!formData||!patient||!procedure){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-const PdfContent=()=>(<div className="p-8 bg-white text-black font-sans text-xs"><div className="flex justify-between items-start pb-4 border-b border-gray-300"><div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className="text-right"><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha:</strong>{fechaCastellano(new Date())}</p></div></div><h2 className="text-lg font-bold text-center my-4">Nota Post-Anestésica</h2><div className="space-y-3"><p><strong>Diagnóstico:</strong>{procedure.diagnostico}</p><p><strong>Procedimiento Realizado:</strong>{procedure.qx_planeada}</p><p><strong>Técnica Anestésica:</strong>{formData.tecnica_anestesica}</p><p><strong>Líquidos Administrados:</strong>{formData.liquidos}</p><h3 className="font-bold pt-2 border-t mt-2">Tiempos</h3><p><strong>Inicio Anestesia:</strong>{formData.inicio_anestesia}|<strong>Término Anestesia:</strong>{formData.termino_anestesia}</p><p><strong>Inicio Cirugía:</strong>{formData.inicio_cirugia}|<strong>Término Cirugía:</strong>{formData.termino_cirugia}</p><h3 className="font-bold pt-2 border-t mt-2">Signos Vitales</h3><p><strong>Ingreso UCPA:</strong>TA:{formData.signosVitalesIngresoUCPA.TA},FC:{formData.signosVitalesIngresoUCPA.FC},FR:{formData.signosVitalesIngresoUCPA.FR},Temp:{formData.signosVitalesIngresoUCPA.Temp},SatO2:{formData.signosVitalesIngresoUCPA.SatO2}</p><p><strong>Alta UCPA:</strong>TA:{formData.signosVitalesAltaUCPA.TA},FC:{formData.signosVitalesAltaUCPA.FC},FR:{formData.signosVitalesAltaUCPA.FR},Temp:{formData.signosVitalesAltaUCPA.Temp},SatO2:{formData.signosVitalesAltaUCPA.SatO2}</p><p><strong>Alta Anestesiología:</strong>TA:{formData.signosVitalesAltaAnestesio.TA},FC:{formData.signosVitalesAltaAnestesio.FC},FR:{formData.signosVitalesAltaAnestesio.FR},Temp:{formData.signosVitalesAltaAnestesio.Temp},SatO2:{formData.signosVitalesAltaAnestesio.SatO2}</p><h3 className="font-bold pt-2 border-t mt-2">Indicaciones</h3><p>{formData.indicaciones_altaAnestesio}</p></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><PdfContent/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Postanestésica</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Detalles</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input label="Diagnóstico" value={procedure.diagnostico}disabled/><Input label="Fecha del Procedimiento" value={formatDateVerbose(procedure.fecha_qx)}disabled/></div><Textarea name="tecnica_anestesica" label="Técnica anestésica y fármacos empleados" value={formData.tecnica_anestesica}onChange={handleChange}rows={5}/><Textarea name="liquidos" label="Sangre y/o líquidos administrados" value={formData.liquidos}onChange={handleChange}rows={3}/><div className="grid grid-cols-2 md:grid-cols-4 gap-4"><Input name="inicio_anestesia" label="Inicio Anestesia" value={formData.inicio_anestesia}onChange={handleChange}placeholder="HH:MM"/><Input name="termino_anestesia" label="Término Anestesia" value={formData.termino_anestesia}onChange={handleChange}placeholder="HH:MM"/><Input name="inicio_cirugia" label="Inicio Cirugía" value={formData.inicio_cirugia}onChange={handleChange}placeholder="HH:MM"/><Input name="termino_cirugia" label="Término Cirugía" value={formData.termino_cirugia}onChange={handleChange}placeholder="HH:MM"/></div><fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales Ingreso UCPA</legend><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2"><Input name="TA" data-section="signosVitalesIngresoUCPA" placeholder="TA" value={formData.signosVitalesIngresoUCPA.TA}onChange={handleChange}/><Input name="FC" data-section="signosVitalesIngresoUCPA" placeholder="FC" value={formData.signosVitalesIngresoUCPA.FC}onChange={handleChange}/><Input name="FR" data-section="signosVitalesIngresoUCPA" placeholder="FR" value={formData.signosVitalesIngresoUCPA.FR}onChange={handleChange}/><Input name="Temp" data-section="signosVitalesIngresoUCPA" placeholder="Temp" value={formData.signosVitalesIngresoUCPA.Temp}onChange={handleChange}/><Input name="SatO2" data-section="signosVitalesIngresoUCPA" placeholder="SatO2" value={formData.signosVitalesIngresoUCPA.SatO2}onChange={handleChange}/></div></fieldset><fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales Alta UCPA</legend><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2"><Input name="TA" data-section="signosVitalesAltaUCPA" placeholder="TA" value={formData.signosVitalesAltaUCPA.TA}onChange={handleChange}/><Input name="FC" data-section="signosVitalesAltaUCPA" placeholder="FC" value={formData.signosVitalesAltaUCPA.FC}onChange={handleChange}/><Input name="FR" data-section="signosVitalesAltaUCPA" placeholder="FR" value={formData.signosVitalesAltaUCPA.FR}onChange={handleChange}/><Input name="Temp" data-section="signosVitalesAltaUCPA" placeholder="Temp" value={formData.signosVitalesAltaUCPA.Temp}onChange={handleChange}/><Input name="SatO2" data-section="signosVitalesAltaUCPA" placeholder="SatO2" value={formData.signosVitalesAltaUCPA.SatO2}onChange={handleChange}/></div></fieldset><fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]"><legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales Alta Anestesiología</legend><div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2"><Input name="TA" data-section="signosVitalesAltaAnestesio" placeholder="TA" value={formData.signosVitalesAltaAnestesio.TA}onChange={handleChange}/><Input name="FC" data-section="signosVitalesAltaAnestesio" placeholder="FC" value={formData.signosVitalesAltaAnestesio.FC}onChange={handleChange}/><Input name="FR" data-section="signosVitalesAltaAnestesio" placeholder="FR" value={formData.signosVitalesAltaAnestesio.FR}onChange={handleChange}/><Input name="Temp" data-section="signosVitalesAltaAnestesio" placeholder="Temp" value={formData.signosVitalesAltaAnestesio.Temp}onChange={handleChange}/><Input name="SatO2" data-section="signosVitalesAltaAnestesio" placeholder="SatO2" value={formData.signosVitalesAltaAnestesio.SatO2}onChange={handleChange}/></div></fieldset><Textarea name="indicaciones_altaAnestesio" label="Indicaciones al Alta de Anestesiología" value={formData.indicaciones_altaAnestesio}onChange={handleChange}rows={4}/></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!scriptsLoaded}>{scriptsLoaded?'Guardar y Generar PDF':'Cargando...'}</Button></div></form></Card></div>)};
-const NotaPostoperatoriaPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[medicos,setMedicos]=useState({});const[formData,setFormData]=useState({diagnostico_postqx:'',cirugia_realizada:'',tecnica:'',hallazgos:'',sangrado:'',incidentes:'',complicaciones:'',cuenta_material:'',pronostico:'',recomendaciones_postop:''});const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);setMedicos({cirujano:MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.id_medico),anestesiologo:MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.qx_anestesiologo),ayudante:MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.id_ayudante),});setFormData({diagnostico_postqx:procData.diagnostico_postqx||procData.diagnostico,cirugia_realizada:procData.cirugia_realizada||procData.qx_planeada,tecnica:procData.tecnica||'',hallazgos:procData.hallazgos||'',sangrado:procData.sangrado||'',incidentes:procData.incidentes||'Ninguno',complicaciones:procData.complicaciones||'',cuenta_material:procData.cuenta_material||'',pronostico:procData.pronostico||'',recomendaciones_postop:procData.recomendaciones_postop||''})}},[procedureId]);const handleChange=(e)=>{const{name,value}=e.target;setFormData(prev=>({...prev,[name]:value}))};const handleSave=async(e)=>{e.preventDefault();const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index]={...MOCK_DATA.procedimientos[index],...formData}}
-try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Nota_Postoperatoria_${patient.nombre}_${patient.apellido}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!procedure||!patient){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-const PdfContent=()=>(<div className="p-8 bg-white text-black font-sans text-xs leading-relaxed"><div className="flex justify-between items-start pb-4 border-b border-gray-300"><div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className="text-right"><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha Cirugía:</strong>{formatDateVerbose(procedure.fecha_qx)}</p></div></div><h2 className="text-lg font-bold text-center my-4">Nota Postoperatoria</h2><div className="space-y-2"><p><strong>Diagnóstico Preoperatorio:</strong>{procedure.diagnostico}</p><p><strong>Diagnóstico Postoperatorio:</strong>{formData.diagnostico_postqx}</p><p><strong>Operación Planeada:</strong>{procedure.qx_planeada}</p><p><strong>Operación Realizada:</strong>{formData.cirugia_realizada}</p><div className="pt-2 mt-2 border-t"><h3 className="font-bold">Descripción de la Técnica Quirúrgica:</h3><p className="whitespace-pre-wrap">{formData.tecnica}</p></div><div className="pt-2 mt-2 border-t"><h3 className="font-bold">Hallazgos:</h3><p className="whitespace-pre-wrap">{formData.hallazgos}</p></div><p><strong>Sangrado Estimado:</strong>{formData.sangrado}ml</p><p><strong>Incidentes:</strong>{formData.incidentes}</p><p><strong>Complicaciones:</strong>{formData.complicaciones}</p><p><strong>Cuenta de Material:</strong>{formData.cuenta_material}</p><p><strong>Pronóstico:</strong>{formData.pronostico}</p><div className="pt-2 mt-2 border-t"><h3 className="font-bold">Recomendaciones:</h3><p className="whitespace-pre-wrap">{formData.recomendaciones_postop}</p></div><div className="mt-10 flex justify-around text-center"><div className="w-1/3"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(medicos.cirujano)}</p><p>Cirujano</p></div></div><div className="w-1/3"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(medicos.ayudante)}</p><p>Ayudante</p></div></div><div className="w-1/3"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(medicos.anestesiologo)}</p><p>Anestesiólogo</p></div></div></div></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><PdfContent/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Postoperatoria</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Detalles</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input name="diagnostico" label="Diagnóstico Preoperatorio" value={procedure.diagnostico}disabled/><Input name="qx_planeada" label="Cirugía Planeada" value={procedure.qx_planeada}disabled/></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input name="diagnostico_postqx" label="Diagnóstico Postoperatorio" value={formData.diagnostico_postqx}onChange={handleChange}/><Input name="cirugia_realizada" label="Operación Realizada" value={formData.cirugia_realizada}onChange={handleChange}/></div><Textarea name="tecnica" label="Descripción de la Técnica Quirúrgica" value={formData.tecnica}onChange={handleChange}rows={6}/><Textarea name="hallazgos" label="Hallazgos" value={formData.hallazgos}onChange={handleChange}rows={4}/><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input name="sangrado" label="Sangrado Estimado (ml)" value={formData.sangrado}onChange={handleChange}placeholder="ej. 100"/><Input name="incidentes" label="Incidentes o Accidentes" value={formData.incidentes}onChange={handleChange}/></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input name="complicaciones" label="Complicaciones" value={formData.complicaciones}onChange={handleChange}/><Input name="cuenta_material" label="Cuenta de Material" value={formData.cuenta_material}onChange={handleChange}/></div><Input name="pronostico" label="Pronóstico" value={formData.pronostico}onChange={handleChange}/><Textarea name="recomendaciones_postop" label="Recomendaciones" value={formData.recomendaciones_postop}rows={4}/><div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200/80"><Input name="cirujano" label="Cirujano" value={formatMedicoName(medicos.cirujano)}disabled/><Input name="ayudante" label="Ayudante" value={formatMedicoName(medicos.ayudante)}disabled/><Input name="anestesiologo" label="Anestesiólogo" value={formatMedicoName(medicos.anestesiologo)}disabled/></div></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!scriptsLoaded}>{scriptsLoaded?'Guardar y Generar PDF':'Cargando...'}</Button></div></form></Card></div>)};
-const IndicacionesPostoperatoriasPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[formData,setFormData]=useState({soluciones_dieta:'',medicamentos:'',examenes:'',actividades_enfermeria:''});const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);setPatient(MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente));if(procData.indicaciones_postop&&typeof procData.indicaciones_postop==='object'){setFormData(procData.indicaciones_postop)}}},[procedureId]);const handleChange=(e)=>{const{name,value}=e.target;setFormData(prev=>({...prev,[name]:value}))};const handleSave=async(e)=>{e.preventDefault();const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index].indicaciones_postop=formData}
-try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();const pdfHeight=pdf.internal.pageSize.getHeight();const ratio=canvas.width/canvas.height;let imgWidth=pdfWidth-20;let imgHeight=imgWidth/ratio;if(imgHeight>pdfHeight-20){imgHeight=pdfHeight-20;imgWidth=imgHeight*ratio}
-const x=(pdfWidth-imgWidth)/2;const y=10;pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);pdf.save(`Indicaciones_Postoperatorias_${patient.nombre}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!procedure||!patient)return<LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/>;const cirujano=MOCK_DATA.usuarios.find(u=>u.id_usuario===procedure.id_medico);const cirujanoInfo=MOCK_DATA.medicos.find(m=>m.id_usuario===cirujano?.id_usuario);const PdfContent=()=>(<div className="p-8 bg-white text-black font-sans text-xs"><div className="flex justify-between items-start pb-4 border-b"><div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className="text-right"><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Fecha:</strong>{fechaCastellano(new Date())}</p></div></div><h2 className="text-lg font-bold text-center my-4">Indicaciones Postoperatorias</h2><div className="space-y-3"><div><h3 className="font-bold">Soluciones/Dieta:</h3><p className="whitespace-pre-wrap pl-2">{formData.soluciones_dieta}</p></div><div><h3 className="font-bold">Medicamentos:</h3><p className="whitespace-pre-wrap pl-2">{formData.medicamentos}</p></div><div><h3 className="font-bold">Exámenes de Laboratorio/Gabinete:</h3><p className="whitespace-pre-wrap pl-2">{formData.examenes}</p></div><div><h3 className="font-bold">Actividades de Enfermería:</h3><p className="whitespace-pre-wrap pl-2">{formData.actividades_enfermeria}</p></div></div><div style={{marginTop:'100px',textAlign:'center',borderTop:'1px solid black',paddingTop:'5px',width:'50%',margin:'100px auto 0'}}><p style={{margin:0}}>{formatMedicoName(cirujano)}</p><p style={{margin:0}}>C.P.{cirujanoInfo?.cedula}</p></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><PdfContent/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Indicaciones Postoperatorias</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-6"><Textarea name="soluciones_dieta" label="Soluciones / Dieta" value={formData.soluciones_dieta}onChange={handleChange}rows={5}/><Textarea name="medicamentos" label="Medicamentos" value={formData.medicamentos}onChange={handleChange}rows={5}/><Textarea name="examenes" label="Exámenes de Laboratorio / Gabinete" value={formData.examenes}onChange={handleChange}rows={5}/><Textarea name="actividades_enfermeria" label="Actividades de Enfermería" value={formData.actividades_enfermeria}onChange={handleChange}rows={5}/></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!scriptsLoaded}>{scriptsLoaded?'Guardar y Generar PDF':'Cargando...'}</Button></div></form></Card></div>)};
-const NotaDeAltaPage=({procedureId,onBack,navigateTo,scriptsLoaded})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[formData,setFormData]=useState({fecha_egreso:getTodayDateString(),dx_egreso:'',motivo_egreso:'mejoria',resumen_egreso:'',indicaciones_egreso:''});const pdfRef=useRef();useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);setPatient(MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente));if(procData.nota_de_alta){setFormData(procData.nota_de_alta)}else{setFormData(prev=>({...prev,dx_egreso:procData.diagnostico_postqx||procData.diagnostico}))}}},[procedureId]);const handleChange=(e)=>{const{name,value}=e.target;setFormData(prev=>({...prev,[name]:value}))};const handleSave=async(e)=>{e.preventDefault();const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index].nota_de_alta=formData}
-try{const{jsPDF}=window.jspdf;const html2canvas=window.html2canvas;const input=pdfRef.current;const canvas=await html2canvas(input,{scale:2,useCORS:true});const imgData=canvas.toDataURL('image/png');const pdf=new jsPDF('p','mm','a4');const pdfWidth=pdf.internal.pageSize.getWidth();pdf.addImage(imgData,'PNG',10,10,pdfWidth-20,0);pdf.save(`Nota_de_Alta_${patient.nombre}.pdf`)}catch(error){console.error("Error al generar el PDF:",error)}
-navigateTo('programacion')};if(!procedure||!patient)return<LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/>;const cirujano=MOCK_DATA.usuarios.find(u=>u.id_usuario===procedure.id_medico);const cirujanoInfo=MOCK_DATA.medicos.find(m=>m.id_usuario===cirujano?.id_usuario);const PdfContent=()=>(<div className="p-8 bg-white text-black font-sans text-sm leading-relaxed"><div className="flex justify-between items-start pb-4 border-b"><div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica,Cancún,Q.Roo</p></div><div className="text-right"><p><strong>Paciente:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Fecha de Ingreso:</strong>{formatDateVerbose(procedure.fecha_qx)}</p><p><strong>Fecha de Egreso:</strong>{formatDateVerbose(formData.fecha_egreso)}</p></div></div><h2 className="text-lg font-bold text-center my-6">Nota de Alta</h2><div className="space-y-3"><p><strong>Diagnóstico de Ingreso:</strong>{procedure.diagnostico}</p><p><strong>Diagnóstico de Egreso:</strong>{formData.dx_egreso}</p><p><strong>Motivo de Egreso:</strong>{formData.motivo_egreso}</p><div className="pt-2 mt-2 border-t"><h3 className="font-bold">Resumen Clínico:</h3><p className="whitespace-pre-wrap">{formData.resumen_egreso}</p></div><div className="pt-2 mt-2 border-t"><h3 className="font-bold">Indicaciones:</h3><p className="whitespace-pre-wrap">{formData.indicaciones_egreso}</p></div></div><div style={{marginTop:'100px',textAlign:'center',borderTop:'1px solid black',paddingTop:'5px',width:'50%',margin:'100px auto 0'}}><p style={{margin:0}}>{formatMedicoName(cirujano)}</p><p style={{margin:0}}>C.P.{cirujanoInfo?.cedula}</p></div></div>);return(<div><div style={{position:'absolute',left:'-9999px',width:'210mm'}}><div ref={pdfRef}><PdfContent/></div></div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota de Alta</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input label="Fecha de Ingreso" value={formatDateVerbose(procedure.fecha_qx)}disabled/><Input name="fecha_egreso" label="Fecha de Egreso" type="date" value={formData.fecha_egreso}onChange={handleChange}/></div><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><Input label="Diagnóstico de Ingreso" value={procedure.diagnostico}disabled/><Input name="dx_egreso" label="Diagnóstico de Egreso" value={formData.dx_egreso}onChange={handleChange}/></div><Select name="motivo_egreso" label="Motivo de Alta" value={formData.motivo_egreso}onChange={handleChange}><option value="mejoria">Mejoría Clínica</option><option value="alta_voluntaria">Alta Voluntaria</option><option value="traslado">Traslado a otro centro</option><option value="motivos_administrativos">Motivos Administrativos</option><option value="alta_contra_consejo_medico">Alta contra consejo médico</option><option value="defuncion">Defunción</option></Select><Textarea name="resumen_egreso" label="Resumen Clínico" value={formData.resumen_egreso}onChange={handleChange}rows={5}/><Textarea name="indicaciones_egreso" label="Indicaciones" value={formData.indicaciones_egreso}onChange={handleChange}rows={5}/></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!scriptsLoaded}>{scriptsLoaded?'Guardar y Generar PDF':'Cargando...'}</Button></div></form></Card></div>)};
-const AgregarFotoPage=({procedureId,onBack,navigateTo})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[description,setDescription]=useState('');const[imagePreview,setImagePreview]=useState(null);const fileInputRef=useRef(null);useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);setPatient(MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente))}},[procedureId]);const handleFileChange=(e)=>{const file=e.target.files[0];if(file){const reader=new FileReader();reader.onloadend=()=>{setImagePreview(reader.result)};reader.readAsDataURL(file)}};const handleSave=(e)=>{e.preventDefault();if(!imagePreview){console.error("Por favor, seleccione una imagen.");return}
-const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){const newPhoto={url:imagePreview,description:description,};if(!MOCK_DATA.procedimientos[index].fotos){MOCK_DATA.procedimientos[index].fotos=[]}
-MOCK_DATA.procedimientos[index].fotos.push(newPhoto)}
-navigateTo('procedimientoDetail',{procedureId})};if(!procedure||!patient)return<LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/>;return(<div><div className="flex justify-between items-center mb-6"><div><h1 className="text-3xl font-bold text-gray-900 tracking-tight">Agregar Foto al Expediente</h1><p className="mt-1 text-gray-600">Paciente:{patient.nombre}{patient.apellido}</p></div><Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2"/>Volver</Button></div><Card><form onSubmit={handleSave}><div className="p-2 space-y-6"><div
-className="w-full h-64 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-500 cursor-pointer hover:bg-slate-200/50"
-onClick={()=>fileInputRef.current.click()}>{imagePreview?(<img src={imagePreview}alt="Vista previa" className="max-h-full max-w-full object-contain rounded-md"/>):(<span>Haz clic aquí para seleccionar una imagen</span>)}</div><input
-type="file"
-accept="image/*"
-ref={fileInputRef}
-onChange={handleFileChange}
-className="hidden"/><Textarea
-name="description"
-label="Descripción de la foto (opcional)"
-value={description}
-onChange={(e)=>setDescription(e.target.value)}
-rows={3}/></div><div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3"><Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button><Button type="submit" disabled={!imagePreview}>Guardar Foto</Button></div></form></Card></div>)};
-const ProcedimientoDetailPage=({procedureId,navigateTo})=>{const[procedure,setProcedure]=useState(null);const[patient,setPatient]=useState(null);const[medicos,setMedicos]=useState({});const[showSuccess,setShowSuccess]=useState(!1);const[isDocsModalOpen,setIsDocsModalOpen]=useState(!1);const[editableProcedure,setEditableProcedure]=useState(null);useEffect(()=>{const procData=MOCK_DATA.procedimientos.find(p=>p.id_procedimiento===procedureId);if(procData){setProcedure(procData);setEditableProcedure(procData);const patData=MOCK_DATA.pacientes.find(p=>p.id_paciente===procData.id_paciente);setPatient(patData);setMedicos({cirujano:MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.id_medico),anestesiologo:MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.qx_anestesiologo),ayudante:MOCK_DATA.usuarios.find(u=>u.id_usuario===procData.id_ayudante),})}},[procedureId]);const handleFieldChange=(e)=>{const{name,value}=e.target;setEditableProcedure(prev=>({...prev,[name]:value}))};const handleSaveChanges=()=>{const index=MOCK_DATA.procedimientos.findIndex(p=>p.id_procedimiento===procedureId);if(index!==-1){MOCK_DATA.procedimientos[index]=editableProcedure;setProcedure(editableProcedure);setShowSuccess(!0);setTimeout(()=>setShowSuccess(!1),2000)}};const handleSelectDocument=(docType)=>{setIsDocsModalOpen(!1);navigateTo(docType,{procedureId})};if(!editableProcedure||!patient){return<div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600"/></div>}
-return(<div><DocumentSelectionModal
-show={isDocsModalOpen}
-onClose={()=>setIsDocsModalOpen(!1)}
-onSelectDocument={handleSelectDocument}
-procedure={procedure}/><Button variant="secondary" onClick={()=>navigateTo('programacion')}className="mb-6"><ArrowLeft className="w-4 h-4 mr-2"/>Volver a Programación</Button><div className="grid grid-cols-1 lg:grid-cols-3 gap-8"><div className="lg:col-span-1 space-y-6"><Card><h2 className="text-xl font-bold mb-4 tracking-tight">Información del Paciente</h2><p><strong>Nombre:</strong>{patient.nombre}{patient.apellido}</p><p><strong>Edad:</strong>{calcularEdad(patient.fecha_nacimiento)}años</p><p><strong>Fecha de Nacimiento:</strong>{formatDateVerbose(patient.fecha_nacimiento)}</p></Card><Card><h2 className="text-xl font-bold mb-4 tracking-tight">Detalles del Procedimiento</h2><p><strong>Diagnóstico:</strong>{procedure.diagnostico}</p><p><strong>Cirugía Planeada:</strong>{procedure.qx_planeada}</p><p><strong>Fecha:</strong>{formatDateVerbose(procedure.fecha_qx)}</p><hr className="my-4 border-slate-200/80"/><p><strong>Cirujano:</strong>{formatMedicoName(medicos.cirujano)}</p><p><strong>Anestesiólogo:</strong>{formatMedicoName(medicos.anestesiologo)}</p><p><strong>Ayudante:</strong>{formatMedicoName(medicos.ayudante)}</p></Card><Card><h2 className="text-xl font-bold mb-4 tracking-tight">Estado del Procedimiento</h2><Select name="status" value={editableProcedure.status}onChange={handleFieldChange}><option value="Programado">Programado</option><option value="Post-op">Post-operatorio</option><option value="Alta">Alta</option></Select><Button className="w-full mt-4" onClick={handleSaveChanges}>{showSuccess?(<><CheckCircle className="w-5 h-5 mr-2"/>Guardado</>):('Guardar Cambios')}</Button></Card><Card><Button className="w-full" variant="secondary" onClick={()=>setIsDocsModalOpen(!0)}><FileText className="w-4 h-4 mr-2"/>Generar/Imprimir Documentos</Button></Card></div><div className="lg:col-span-2 space-y-6"><Card><h2 className="text-xl font-bold mb-4 tracking-tight">Resumen de Notas Clínicas</h2><div className="space-y-4"><div><h3 className="font-semibold text-gray-800">Nota de Ingreso</h3><p className="text-sm text-gray-600 truncate">{procedure.resumen_ingreso?.interrogatorio||'No registrada.'}</p></div><hr className="border-slate-200/80"/><div><h3 className="font-semibold text-gray-800">Nota Preanestésica</h3><p className="text-sm text-gray-600 truncate">{procedure.notaPreanestesica?.planAnestesico?.plan||'No registrada.'}</p></div><hr className="border-slate-200/80"/><div><h3 className="font-semibold text-gray-800">Nota Postoperatoria</h3><p className="text-sm text-gray-600 truncate">{procedure.tecnica||'No registrada.'}</p></div></div></Card><Card><h2 className="text-xl font-bold mb-4 tracking-tight">Galería de Fotos</h2>{procedure.fotos&&procedure.fotos.length>0?(<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{procedure.fotos.map((foto,index)=>(<div key={index}><img src={foto.url}alt={foto.description||`Foto ${index + 1}`}className="rounded-lg w-full h-40 object-cover"/><p className="text-sm text-gray-600 mt-2">{foto.description}</p></div>))}</div>):(<p className="text-sm text-gray-500">No hay fotos para este procedimiento.</p>)}</Card></div></div></div>)};
+
+const NotaIngresoPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [formData, setFormData] = useState({
+        signosVitales: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
+        interrogatorio: '',
+        exploracionFisica: '',
+        planTratamiento: ''
+    });
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            if (procData.resumen_ingreso && typeof procData.resumen_ingreso === 'object') {
+                setFormData({
+                    signosVitales: procData.resumen_ingreso.signosVitales || { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
+                    interrogatorio: procData.resumen_ingreso.interrogatorio || '',
+                    exploracionFisica: procData.resumen_ingreso.exploracionFisica || '',
+                    planTratamiento: procData.resumen_ingreso.planTratamiento || ''
+                });
+            }
+        }
+    }, [procedureId]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        const vitalSignsKeys = ['TA', 'FC', 'FR', 'Temp', 'SatO2'];
+        if (vitalSignsKeys.includes(name)) {
+            setFormData(prev => ({ ...prev, signosVitales: { ...prev.signosVitales, [name]: value } }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index].resumen_ingreso = formData;
+        }
+        
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Nota de Ingreso - ${patient.nombre} ${patient.apellido}`);
+        onBack();
+    };
+
+    if (!procedure || !patient) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
+
+    return (
+        <div>
+            {/* Hidden component for printing */}
+            <div className="hidden">
+                <div ref={printRef} className="p-8 bg-white text-black font-sans">
+                    <div className="flex justify-between items-start pb-4 border-b border-gray-300">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">Clínica SIC</h1>
+                            <p className="text-sm text-gray-600">Dirección de la Clínica, Cancún, Q.Roo</p>
+                        </div>
+                        <div className="text-right text-sm text-gray-600">
+                            <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                            <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                            <p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p>
+                        </div>
+                    </div>
+                    <h2 className="text-xl font-bold text-center my-6 text-gray-800">Nota de Ingreso</h2>
+                    <div className="space-y-4 text-sm">
+                        <p><strong>Diagnóstico:</strong> {procedure.diagnostico}</p>
+                        <p><strong>Procedimiento Planeado:</strong> {procedure.qx_planeada}</p>
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                            <h3 className="font-bold mb-2 text-gray-700">Signos Vitales</h3>
+                            <p>TA: {formData.signosVitales.TA} mmHg | FC: {formData.signosVitales.FC} lpm | FR: {formData.signosVitales.FR} rpm | Temp: {formData.signosVitales.Temp} °C | SatO2: {formData.signosVitales.SatO2} %</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                            <h3 className="font-bold mb-2 text-gray-700">Resumen del Interrogatorio</h3>
+                            <p className="whitespace-pre-wrap">{formData.interrogatorio}</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                            <h3 className="font-bold mb-2 text-gray-700">Exploración Física</h3>
+                            <p className="whitespace-pre-wrap">{formData.exploracionFisica}</p>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                            <h3 className="font-bold mb-2 text-gray-700">Plan de Tratamiento</h3>
+                            <p className="whitespace-pre-wrap">{formData.planTratamiento}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Visible component for UI */}
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota de Ingreso</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver a Detalles</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input name="diagnostico" label="Diagnóstico" value={procedure.diagnostico} disabled />
+                            <Input name="qx_planeada" label="Procedimiento Planeado" value={procedure.qx_planeada} disabled />
+                        </div>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" label="TA (mmHg)" value={formData.signosVitales.TA} onChange={handleChange} />
+                                <Input name="FC" label="FC (lpm)" value={formData.signosVitales.FC} onChange={handleChange} />
+                                <Input name="FR" label="FR (rpm)" value={formData.signosVitales.FR} onChange={handleChange} />
+                                <Input name="Temp" label="Temp (°C)" value={formData.signosVitales.Temp} onChange={handleChange} />
+                                <Input name="SatO2" label="SatO2 (%)" value={formData.signosVitales.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+                        <Textarea name="interrogatorio" label="Resumen del Interrogatorio" value={formData.interrogatorio} onChange={handleChange} rows={5} />
+                        <Textarea name="exploracionFisica" label="Exploración Física" value={formData.exploracionFisica} onChange={handleChange} rows={5} />
+                        <Textarea name="planTratamiento" label="Plan de Tratamiento" value={formData.planTratamiento} onChange={handleChange} rows={3} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const ConsentimientoQuirurgicoPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [cirujano, setCirujano] = useState(null);
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            const cirujanoData = MOCK_DATA.usuarios.find(u => u.id_usuario === procData.id_medico);
+            setCirujano(cirujanoData);
+        }
+    }, [procedureId]);
+
+    const handlePrint = () => {
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Consentimiento Quirúrgico - ${patient.nombre} ${patient.apellido}`);
+        onBack();
+    };
+
+    if (!procedure || !patient || !cirujano) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
+
+    const ConsentimientoContent = ({ isPrintView = false }) => (
+        <div className={`${isPrintView ? 'p-8 bg-white text-black font-sans' : 'p-2'}`}>
+            <div className={`flex justify-between items-start pb-4 ${isPrintView ? 'border-b border-gray-300' : ''}`}>
+                <div>
+                    <h1 className={`${isPrintView ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800`}>Clínica SIC</h1>
+                    <p className={`${isPrintView ? 'text-sm' : ''} text-gray-600`}>Dirección de la Clínica, Cancún, Q.Roo</p>
+                </div>
+                <div className={`${isPrintView ? 'text-sm' : ''} text-right text-gray-600`}>
+                    <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                    <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                    <p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p>
+                </div>
+            </div>
+            <h2 className={`${isPrintView ? 'text-xl' : 'text-2xl'} font-bold text-center my-6 text-gray-800`}>Consentimiento Informado Quirúrgico</h2>
+            <div className="space-y-4 text-sm text-gray-700 leading-relaxed">
+                <p className="text-xs text-gray-500 text-justify">Fundamentos: Reglamento de la Ley General de Salud en materia de prestación de servicios de atención médica; artículo 80, 81, 82 y 83; Norma Oficial Mexicana, NOM-004-SSA3-2012, del expediente clínico, numerales 4.2, 10.1, 10.1.2, 10.1.3, 10.1.2.3 y NOM 006-SSA3-2011.</p>
+                <p><strong>Yo como paciente ( ), Familiar ( ), Tutor ( ) o Representante Legal ( )</strong></p>
+                <p><strong>Nombre:</strong> _________________________________________________________________</p>
+                <p>Manifiesto mi libre voluntad para autorizar los procedimientos diagnósticos, terapéuticos y quirúrgicos que se me indiquen después de haber recibido y entendido la información suficiente, clara, oportuna y veraz sobre mi enfermedad y estado actual; además de los beneficios, riesgos y posibles complicaciones y secuelas inherentes.</p>
+                <p>Se me han comunicado las alternativas existentes y disponibles, el derecho a cambio de mi decisión en cualquier momento antes del procedimiento o intervención. Me comprometo a proporcionar información completa y veraz, así como seguir las indicaciones médicas con el propósito de que mi atención sea adecuada. Otorgo mi autorización al personal de salud para la atención de contingencias y urgencias derivadas del acto médico-quirúrgico señalado, atendiendo al principio de libertad prescriptiva.</p>
+                <p>Se me han explicado a detalle todos los <strong>beneficios</strong> y <strong>posibles riesgos</strong> relacionados con su realización que a continuación se mencionan:</p>
+                <div className="pl-4">
+                    <p><strong className="font-semibold">Riesgos:</strong> {procedure.riesgos || 'No especificados.'}</p>
+                    <p><strong className="font-semibold">Beneficios:</strong> {procedure.beneficios || 'No especificados.'}</p>
+                </div>
+                <p><strong>Otorgo mi consentimiento</strong> para que se me administre el tipo de anestesia que por mi particular estado de salud y tipo de cirugía a la que seré sometido, se me practiquen de ser necesarios, los procedimientos de monitoreo invasivos intraoperatorios pertinentes (colocación de sondas, catéter venoso central, canalización de línea arterial).</p>
+                <div className="mt-6 pt-4 border-t">
+                    <p><strong>Diagnóstico:</strong> {procedure.diagnostico}</p>
+                    <p><strong>Procedimiento Proyectado:</strong> {procedure.qx_planeada}</p>
+                </div>
+                <div className="mt-20 flex justify-around text-center">
+                    <div className="w-1/2"><div className="border-t border-gray-400 pt-2"><p>Paciente, Familiar o Representante Legal</p></div></div>
+                    <div className="w-1/2"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(cirujano)}</p></div></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><ConsentimientoContent isPrintView={true} /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Consentimiento Quirúrgico</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver a Detalles</Button>
+            </div>
+            <Card>
+                <ConsentimientoContent />
+                <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                    <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                    <Button type="button" onClick={handlePrint}>Abrir para Imprimir</Button>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+const ConsentimientoAnestesicoPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [anestesiologo, setAnestesiologo] = useState(null);
+    const printRef = useRef(null);
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            const anestesiologoData = MOCK_DATA.usuarios.find(u => u.id_usuario === procData.qx_anestesiologo);
+            setAnestesiologo(anestesiologoData);
+        }
+    }, [procedureId]);
+
+    const handlePrint = () => {
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Consentimiento Anestésico - ${patient.nombre} ${patient.apellido}`);
+        onBack();
+    };
+
+    if (!procedure || !patient || !anestesiologo) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
+
+    const ConsentimientoContent = ({ isPrintView = false }) => (
+        <div className={`${isPrintView ? 'p-8 bg-white text-black font-sans' : 'p-2'}`}>
+            <div className={`flex justify-between items-start pb-4 ${isPrintView ? 'border-b border-gray-300' : ''}`}>
+                <div>
+                    <h1 className={`${isPrintView ? 'text-2xl' : 'text-3xl'} font-bold text-gray-800`}>Clínica SIC</h1>
+                    <p className={`${isPrintView ? 'text-sm' : ''} text-gray-600`}>Dirección de la Clínica, Cancún, Q.Roo</p>
+                </div>
+                <div className={`${isPrintView ? 'text-sm' : ''} text-right text-gray-600`}>
+                    <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                    <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                    <p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p>
+                </div>
+            </div>
+            <h2 className={`${isPrintView ? 'text-xl' : 'text-2xl'} font-bold text-center my-6 text-gray-800`}>Consentimiento Informado para Anestesia</h2>
+            <div className="space-y-4 text-sm text-gray-700 leading-relaxed">
+                <p className="text-xs text-gray-500 text-justify">Fundamentos: Reglamento de la Ley General de Salud en materia de prestación de servicios de atención médica; artículo 80, 81, 82 y 83; Norma Oficial Mexicana, NOM-004-SSA3-2012, del expediente clínico, numerales 4.2, 10.1, 10.1.2, 10.1.3, 10.1.2.3 y NOM 006-SSA3-2011.</p>
+                <p><strong>Yo como paciente ( ), Familiar ( ), Tutor ( ) o Representante Legal ( )</strong></p>
+                <p><strong>Nombre:</strong> _________________________________________________________________</p>
+                <p>Expreso mi libre voluntad para autorizar se me realice el procedimiento anestésico y/o analgésico requerido.</p>
+                <p>Se me ha explicado de forma clara y con lenguaje sencillo todo lo que a continuación se detalla en lenguaje técnico. He comprendido satisfactoriamente la naturaleza y propósito de la técnica de anestesia a la que me debo someter a efectos de ser intervenido quirúrgicamente, así como la probabilidad de cambio de técnica durante el mismo procedimiento quirúrgico si fuese necesario. Se me ha dado la oportunidad de discutir, preguntar y aclarar todas mis dudas sobre riesgos, beneficios y alternativas relacionadas con la anestesia y su técnica requerida, y aclaro que todas ellas han sido abordadas de manera satisfactoria.</p>
+                <p><strong className="font-semibold">Riesgos:</strong> Se me han explicado los posibles riesgos, incluyendo pero no limitado a: lesiones en la vía aérea, efectos adversos a medicamentos, cefalea, lesiones nerviosas, paro cardiorrespiratorio y muerte.</p>
+                <div className="mt-6 pt-4 border-t">
+                    <p><strong>Diagnóstico:</strong> {procedure.diagnostico}</p>
+                    <p><strong>Procedimiento Proyectado:</strong> {procedure.qx_planeada}</p>
+                </div>
+                <div className="mt-20 space-y-10 text-center">
+                    <div className="flex justify-around">
+                        <div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>Paciente, Familiar o Representante Legal</p></div></div>
+                        <div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>Testigo</p></div></div>
+                    </div>
+                    <div className="flex justify-around">
+                        <div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>{formatMedicoName(anestesiologo)}</p></div></div>
+                        <div className="w-1/2"><div className="border-t border-gray-400 pt-2 mx-4"><p>Testigo</p></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><ConsentimientoContent isPrintView={true} /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Consentimiento Anestésico</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver a Detalles</Button>
+            </div>
+            <Card>
+                <ConsentimientoContent />
+                <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                    <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                    <Button type="button" onClick={handlePrint}>Abrir para Imprimir</Button>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+const NotaPreanestesicaPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [formData, setFormData] = useState(null);
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            const initialData = JSON.parse(JSON.stringify(procData.notaPreanestesica || {}));
+            const defaults = {
+                antecedentes: { tabaquismo: '', alcoholismo: '', toxicomanias: '', ejercicio: '', asma: '', alergias: '', cardiovascular: '', pulmonar: '', endocrinologico: '', antecedentes_anestesicos: '', antecedentes_quirurgicos: '' },
+                exploracion: { peso: '', talla: '', TA: '', FC: '', FR: '', Temp: '', SatO2: '', tegumentos: '', cabeza: '', traquea: '', CP: '', cardio: '', extremidades: '' },
+                viaAerea: { mallampati: '', aldreti: '', bellhouseDore: '', interincisiva: '', outras: '' },
+                laboratorio: { hb: '', hct: '', leucos: '', plaquetas: '', glucosa: '', creatinina: '', bun: '', urea: '', tp: '', ttp: '', inr: '' },
+                ekg: '',
+                planAnestesico: { valoraciones: '', plan: '', indicaciones: '' }
+            };
+            for (const section in defaults) {
+                if (typeof defaults[section] === 'object' && defaults[section] !== null && !Array.isArray(defaults[section])) {
+                    initialData[section] = { ...defaults[section], ...(initialData[section] || {}) };
+                } else {
+                    if (typeof initialData[section] === 'undefined') {
+                        initialData[section] = defaults[section];
+                    }
+                }
+            }
+            setFormData(initialData);
+        }
+    }, [procedureId]);
+
+    const handleChange = (e) => {
+        const { name, value, dataset } = e.target;
+        const { section, field } = dataset;
+        setFormData(prev => {
+            const newFormData = { ...prev };
+            if (section) {
+                newFormData[section] = { ...newFormData[section], [field]: value };
+            } else {
+                newFormData[name] = value;
+            }
+            return newFormData;
+        });
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index].notaPreanestesica = formData;
+        }
+        
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Nota Preanestésica - ${patient.nombre} ${patient.apellido}`);
+        onBack();
+    };
+
+    if (!formData || !patient || !procedure) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-xs">
+            <div className="flex justify-between items-start pb-4 border-b border-gray-300">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right"><p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p><p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p><p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p></div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-4">Nota de Valoración Pre-Anestésica</h2>
+            <div className="space-y-3">
+                <p><strong>Diagnóstico:</strong> {procedure.diagnostico}</p>
+                <p><strong>Procedimiento Planeado:</strong> {procedure.qx_planeada}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Antecedentes</h3>
+                <p><strong>Alergias:</strong> {formData.antecedentes.alergias}</p>
+                <p><strong>Cardiovascular:</strong> {formData.antecedentes.cardiovascular}</p>
+                <p><strong>Anestésicos Previos:</strong> {formData.antecedentes.antecedentes_anestesicos}</p>
+                <p><strong>Quirúrgicos Previos:</strong> {formData.antecedentes.antecedentes_quirurgicos}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Exploración Física</h3>
+                <p><strong>Peso:</strong> {formData.exploracion.peso} kg, <strong>Talla:</strong> {formData.exploracion.talla} cm</p>
+                <p><strong>Signos Vitales:</strong> TA: {formData.exploracion.TA}, FC: {formData.exploracion.FC}, FR: {formData.exploracion.FR}, Temp: {formData.exploracion.Temp}, SatO2: {formData.exploracion.SatO2}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Vía Aérea</h3>
+                <p><strong>Mallampati:</strong> {formData.viaAerea.mallampati}, <strong>Aldreti:</strong> {formData.viaAerea.aldreti}, <strong>Bellhouse-Dore:</strong> {formData.viaAerea.bellhouseDore}, <strong>Interincisiva:</strong> {formData.viaAerea.interincisiva} cm</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Laboratorio y Gabinete</h3>
+                <p><strong>Hb:</strong> {formData.laboratorio.hb}, <strong>Hct:</strong> {formData.laboratorio.hct}, <strong>Plaquetas:</strong> {formData.laboratorio.plaquetas}, <strong>Glucosa:</strong> {formData.laboratorio.glucosa}, <strong>TP:</strong> {formData.laboratorio.tp}, <strong>TTP:</strong> {formData.laboratorio.ttp}</p>
+                <p><strong>EKG:</strong> {formData.ekg}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Plan Anestésico</h3>
+                <p><strong>Valoraciones:</strong> {formData.planAnestesico.valoraciones}</p>
+                <p><strong>Plan:</strong> {formData.planAnestesico.plan}</p>
+                <p><strong>Indicaciones:</strong> {formData.planAnestesico.indicaciones}</p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Preanestésica</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver a Detalles</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-base font-medium text-gray-900 px-2">Antecedentes</legend>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                                {Object.entries(formData.antecedentes).map(([key, value]) => (
+                                    <Input key={key} id={`ant-${key}`} label={key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} data-section="antecedentes" data-field={key} value={value} onChange={handleChange} />
+                                ))}
+                            </div>
+                        </fieldset>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-base font-medium text-gray-900 px-2">Exploración Física</legend>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-2">
+                                {Object.entries(formData.exploracion).map(([key, value]) => (
+                                    <Input key={key} id={`exp-${key}`} label={key.toUpperCase()} data-section="exploracion" data-field={key} value={value} onChange={handleChange} />
+                                ))}
+                            </div>
+                        </fieldset>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-base font-medium text-gray-900 px-2">Vía Aérea</legend>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-2">
+                                {Object.entries(formData.viaAerea).map(([key, value]) => (
+                                    <Input key={key} id={`via-${key}`} label={key.charAt(0).toUpperCase() + key.slice(1)} data-section="viaAerea" data-field={key} value={value} onChange={handleChange} />
+                                ))}
+                            </div>
+                        </fieldset>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-base font-medium text-gray-900 px-2">Laboratorio</legend>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-2">
+                                {Object.entries(formData.laboratorio).map(([key, value]) => (
+                                    <Input key={key} id={`lab-${key}`} label={key.toUpperCase()} data-section="laboratorio" data-field={key} value={value} onChange={handleChange} />
+                                ))}
+                            </div>
+                        </fieldset>
+                        <Textarea name="ekg" label="EKG" value={formData.ekg} onChange={handleChange} rows={2} />
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-base font-medium text-gray-900 px-2">Plan Anestésico</legend>
+                            <div className="space-y-4 mt-2">
+                                <Textarea id="plan-val" label="Valoraciones" data-section="planAnestesico" data-field="valoraciones" value={formData.planAnestesico.valoraciones} onChange={handleChange} rows={2} />
+                                <Textarea id="plan-plan" label="Plan" data-section="planAnestesico" data-field="plan" value={formData.planAnestesico.plan} onChange={handleChange} rows={3} />
+                                <Textarea id="plan-ind" label="Indicaciones" data-section="planAnestesico" data-field="indicaciones" value={formData.planAnestesico.indicaciones} onChange={handleChange} rows={2} />
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const NotaPostanestesicaPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [formData, setFormData] = useState(null);
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            const initialData = JSON.parse(JSON.stringify(procData.notaPostanestesica || {}));
+            const defaults = {
+                tecnica_anestesica: '', liquidos: '', inicio_anestesia: '', termino_anestesia: '', inicio_cirugia: '', termino_cirugia: '',
+                signosVitalesIngresoUCPA: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
+                signosVitalesAltaUCPA: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
+                signosVitalesAltaAnestesio: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
+                indicaciones_altaAnestesio: ''
+            };
+            const mergedData = { ...defaults, ...initialData };
+            mergedData.signosVitalesIngresoUCPA = { ...defaults.signosVitalesIngresoUCPA, ...initialData.signosVitalesIngresoUCPA };
+            mergedData.signosVitalesAltaUCPA = { ...defaults.signosVitalesAltaUCPA, ...initialData.signosVitalesAltaUCPA };
+            mergedData.signosVitalesAltaAnestesio = { ...defaults.signosVitalesAltaAnestesio, ...initialData.signosVitalesAltaAnestesio };
+            setFormData(mergedData);
+        }
+    }, [procedureId]);
+
+    const handleChange = (e) => {
+        const { name, value, dataset } = e.target;
+        const { section } = dataset;
+        setFormData(prev => {
+            const newFormData = { ...prev };
+            if (section) {
+                newFormData[section] = { ...newFormData[section], [name]: value };
+            } else {
+                newFormData[name] = value;
+            }
+            return newFormData;
+        });
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index].notaPostanestesica = formData;
+        }
+
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Nota Postanestésica - ${patient.nombre} ${patient.apellido}`);
+        onBack();
+    };
+
+    if (!formData || !patient || !procedure) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-xs">
+            <div className="flex justify-between items-start pb-4 border-b border-gray-300">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right"><p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p><p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p><p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p></div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-4">Nota Post-Anestésica</h2>
+            <div className="space-y-3">
+                <p><strong>Diagnóstico:</strong> {procedure.diagnostico}</p>
+                <p><strong>Procedimiento Realizado:</strong> {procedure.qx_planeada}</p>
+                <p><strong>Técnica Anestésica:</strong> {formData.tecnica_anestesica}</p>
+                <p><strong>Líquidos Administrados:</strong> {formData.liquidos}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Tiempos</h3>
+                <p><strong>Inicio Anestesia:</strong> {formData.inicio_anestesia} | <strong>Término Anestesia:</strong> {formData.termino_anestesia}</p>
+                <p><strong>Inicio Cirugía:</strong> {formData.inicio_cirugia} | <strong>Término Cirugía:</strong> {formData.termino_cirugia}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Signos Vitales</h3>
+                <p><strong>Ingreso UCPA:</strong> TA: {formData.signosVitalesIngresoUCPA.TA}, FC: {formData.signosVitalesIngresoUCPA.FC}, FR: {formData.signosVitalesIngresoUCPA.FR}, Temp: {formData.signosVitalesIngresoUCPA.Temp}, SatO2: {formData.signosVitalesIngresoUCPA.SatO2}</p>
+                <p><strong>Alta UCPA:</strong> TA: {formData.signosVitalesAltaUCPA.TA}, FC: {formData.signosVitalesAltaUCPA.FC}, FR: {formData.signosVitalesAltaUCPA.FR}, Temp: {formData.signosVitalesAltaUCPA.Temp}, SatO2: {formData.signosVitalesAltaUCPA.SatO2}</p>
+                <p><strong>Alta Anestesiología:</strong> TA: {formData.signosVitalesAltaAnestesio.TA}, FC: {formData.signosVitalesAltaAnestesio.FC}, FR: {formData.signosVitalesAltaAnestesio.FR}, Temp: {formData.signosVitalesAltaAnestesio.Temp}, SatO2: {formData.signosVitalesAltaAnestesio.SatO2}</p>
+                <h3 className="font-bold pt-2 border-t mt-2">Indicaciones</h3>
+                <p>{formData.indicaciones_altaAnestesio}</p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Postanestésica</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver a Detalles</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Diagnóstico" value={procedure.diagnostico} disabled />
+                            <Input label="Fecha del Procedimiento" value={formatDateVerbose(procedure.fecha_qx)} disabled />
+                        </div>
+                        <Textarea name="tecnica_anestesica" label="Técnica anestésica y fármacos empleados" value={formData.tecnica_anestesica} onChange={handleChange} rows={5} />
+                        <Textarea name="liquidos" label="Sangre y/o líquidos administrados" value={formData.liquidos} onChange={handleChange} rows={3} />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Input name="inicio_anestesia" label="Inicio Anestesia" value={formData.inicio_anestesia} onChange={handleChange} placeholder="HH:MM" />
+                            <Input name="termino_anestesia" label="Término Anestesia" value={formData.termino_anestesia} onChange={handleChange} placeholder="HH:MM" />
+                            <Input name="inicio_cirugia" label="Inicio Cirugía" value={formData.inicio_cirugia} onChange={handleChange} placeholder="HH:MM" />
+                            <Input name="termino_cirugia" label="Término Cirugía" value={formData.termino_cirugia} onChange={handleChange} placeholder="HH:MM" />
+                        </div>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales Ingreso UCPA</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" data-section="signosVitalesIngresoUCPA" placeholder="TA" value={formData.signosVitalesIngresoUCPA.TA} onChange={handleChange} />
+                                <Input name="FC" data-section="signosVitalesIngresoUCPA" placeholder="FC" value={formData.signosVitalesIngresoUCPA.FC} onChange={handleChange} />
+                                <Input name="FR" data-section="signosVitalesIngresoUCPA" placeholder="FR" value={formData.signosVitalesIngresoUCPA.FR} onChange={handleChange} />
+                                <Input name="Temp" data-section="signosVitalesIngresoUCPA" placeholder="Temp" value={formData.signosVitalesIngresoUCPA.Temp} onChange={handleChange} />
+                                <Input name="SatO2" data-section="signosVitalesIngresoUCPA" placeholder="SatO2" value={formData.signosVitalesIngresoUCPA.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales Alta UCPA</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" data-section="signosVitalesAltaUCPA" placeholder="TA" value={formData.signosVitalesAltaUCPA.TA} onChange={handleChange} />
+                                <Input name="FC" data-section="signosVitalesAltaUCPA" placeholder="FC" value={formData.signosVitalesAltaUCPA.FC} onChange={handleChange} />
+                                <Input name="FR" data-section="signosVitalesAltaUCPA" placeholder="FR" value={formData.signosVitalesAltaUCPA.FR} onChange={handleChange} />
+                                <Input name="Temp" data-section="signosVitalesAltaUCPA" placeholder="Temp" value={formData.signosVitalesAltaUCPA.Temp} onChange={handleChange} />
+                                <Input name="SatO2" data-section="signosVitalesAltaUCPA" placeholder="SatO2" value={formData.signosVitalesAltaUCPA.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales Alta Anestesiología</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" data-section="signosVitalesAltaAnestesio" placeholder="TA" value={formData.signosVitalesAltaAnestesio.TA} onChange={handleChange} />
+                                <Input name="FC" data-section="signosVitalesAltaAnestesio" placeholder="FC" value={formData.signosVitalesAltaAnestesio.FC} onChange={handleChange} />
+                                <Input name="FR" data-section="signosVitalesAltaAnestesio" placeholder="FR" value={formData.signosVitalesAltaAnestesio.FR} onChange={handleChange} />
+                                <Input name="Temp" data-section="signosVitalesAltaAnestesio" placeholder="Temp" value={formData.signosVitalesAltaAnestesio.Temp} onChange={handleChange} />
+                                <Input name="SatO2" data-section="signosVitalesAltaAnestesio" placeholder="SatO2" value={formData.signosVitalesAltaAnestesio.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+                        <Textarea name="indicaciones_altaAnestesio" label="Indicaciones al Alta de Anestesiología" value={formData.indicaciones_altaAnestesio} onChange={handleChange} rows={4} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const NotaPostoperatoriaPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [medicos, setMedicos] = useState({});
+    const [formData, setFormData] = useState({
+        diagnostico_postqx: '', cirugia_realizada: '', tecnica: '', hallazgos: '', sangrado: '',
+        incidentes: '', complicaciones: '', cuenta_material: '', pronostico: '', recomendaciones_postop: ''
+    });
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            setMedicos({
+                cirujano: MOCK_DATA.usuarios.find(u => u.id_usuario === procData.id_medico),
+                anestesiologo: MOCK_DATA.usuarios.find(u => u.id_usuario === procData.qx_anestesiologo),
+                ayudante: MOCK_DATA.usuarios.find(u => u.id_usuario === procData.id_ayudante),
+            });
+            setFormData({
+                diagnostico_postqx: procData.diagnostico_postqx || procData.diagnostico,
+                cirugia_realizada: procData.cirugia_realizada || procData.qx_planeada,
+                tecnica: procData.tecnica || '',
+                hallazgos: procData.hallazgos || '',
+                sangrado: procData.sangrado || '',
+                incidentes: procData.incidentes || 'Ninguno',
+                complicaciones: procData.complicaciones || '',
+                cuenta_material: procData.cuenta_material || '',
+                pronostico: procData.pronostico || '',
+                recomendaciones_postop: procData.recomendaciones_postop || ''
+            });
+        }
+    }, [procedureId]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index] = { ...MOCK_DATA.procedimientos[index], ...formData };
+        }
+        
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Nota Postoperatoria - ${patient.nombre} ${patient.apellido}`);
+        onBack();
+    };
+
+    if (!procedure || !patient) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-xs leading-relaxed">
+            <div className="flex justify-between items-start pb-4 border-b border-gray-300">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right"><p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p><p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p><p><strong>Fecha Cirugía:</strong> {formatDateVerbose(procedure.fecha_qx)}</p></div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-4">Nota Postoperatoria</h2>
+            <div className="space-y-2">
+                <p><strong>Diagnóstico Preoperatorio:</strong> {procedure.diagnostico}</p>
+                <p><strong>Diagnóstico Postoperatorio:</strong> {formData.diagnostico_postqx}</p>
+                <p><strong>Operación Planeada:</strong> {procedure.qx_planeada}</p>
+                <p><strong>Operación Realizada:</strong> {formData.cirugia_realizada}</p>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Descripción de la Técnica Quirúrgica:</h3><p className="whitespace-pre-wrap">{formData.tecnica}</p></div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Hallazgos:</h3><p className="whitespace-pre-wrap">{formData.hallazgos}</p></div>
+                <p><strong>Sangrado Estimado:</strong> {formData.sangrado} ml</p>
+                <p><strong>Incidentes:</strong> {formData.incidentes}</p>
+                <p><strong>Complicaciones:</strong> {formData.complicaciones}</p>
+                <p><strong>Cuenta de Material:</strong> {formData.cuenta_material}</p>
+                <p><strong>Pronóstico:</strong> {formData.pronostico}</p>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Recomendaciones:</h3><p className="whitespace-pre-wrap">{formData.recomendaciones_postop}</p></div>
+                <div className="mt-10 flex justify-around text-center">
+                    <div className="w-1/3"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(medicos.cirujano)}</p><p>Cirujano</p></div></div>
+                    <div className="w-1/3"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(medicos.ayudante)}</p><p>Ayudante</p></div></div>
+                    <div className="w-1/3"><div className="border-t border-gray-400 pt-2"><p>{formatMedicoName(medicos.anestesiologo)}</p><p>Anestesiólogo</p></div></div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Postoperatoria</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver a Detalles</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input name="diagnostico" label="Diagnóstico Preoperatorio" value={procedure.diagnostico} disabled />
+                            <Input name="qx_planeada" label="Cirugía Planeada" value={procedure.qx_planeada} disabled />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input name="diagnostico_postqx" label="Diagnóstico Postoperatorio" value={formData.diagnostico_postqx} onChange={handleChange} />
+                            <Input name="cirugia_realizada" label="Operación Realizada" value={formData.cirugia_realizada} onChange={handleChange} />
+                        </div>
+                        <Textarea name="tecnica" label="Descripción de la Técnica Quirúrgica" value={formData.tecnica} onChange={handleChange} rows={6} />
+                        <Textarea name="hallazgos" label="Hallazgos" value={formData.hallazgos} onChange={handleChange} rows={4} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input name="sangrado" label="Sangrado Estimado (ml)" value={formData.sangrado} onChange={handleChange} placeholder="ej. 100" />
+                            <Input name="incidentes" label="Incidentes o Accidentes" value={formData.incidentes} onChange={handleChange} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input name="complicaciones" label="Complicaciones" value={formData.complicaciones} onChange={handleChange} />
+                            <Input name="cuenta_material" label="Cuenta de Material" value={formData.cuenta_material} onChange={handleChange} />
+                        </div>
+                        <Input name="pronostico" label="Pronóstico" value={formData.pronostico} onChange={handleChange} />
+                        <Textarea name="recomendaciones_postop" label="Recomendaciones" value={formData.recomendaciones_postop} rows={4} />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-200/80">
+                            <Input name="cirujano" label="Cirujano" value={formatMedicoName(medicos.cirujano)} disabled />
+                            <Input name="ayudante" label="Ayudante" value={formatMedicoName(medicos.ayudante)} disabled />
+                            <Input name="anestesiologo" label="Anestesiólogo" value={formatMedicoName(medicos.anestesiologo)} disabled />
+                        </div>
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const IndicacionesPostoperatoriasPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [formData, setFormData] = useState({
+        soluciones_dieta: '', medicamentos: '', examenes: '', actividades_enfermeria: ''
+    });
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            setPatient(MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente));
+            if (procData.indicaciones_postop && typeof procData.indicaciones_postop === 'object') {
+                setFormData(procData.indicaciones_postop);
+            }
+        }
+    }, [procedureId]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index].indicaciones_postop = formData;
+        }
+        
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Indicaciones Postoperatorias - ${patient.nombre}`);
+        onBack();
+    };
+
+    if (!procedure || !patient) return <LoaderCircle className="w-12 h-12 animate-spin text-blue-600" />;
+
+    const cirujano = MOCK_DATA.usuarios.find(u => u.id_usuario === procedure.id_medico);
+    const cirujanoInfo = MOCK_DATA.medicos.find(m => m.id_usuario === cirujano?.id_usuario);
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-xs">
+            <div className="flex justify-between items-start pb-4 border-b">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right"><p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p><p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p></div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-4">Indicaciones Postoperatorias</h2>
+            <div className="space-y-3">
+                <div><h3 className="font-bold">Soluciones/Dieta:</h3><p className="whitespace-pre-wrap pl-2">{formData.soluciones_dieta}</p></div>
+                <div><h3 className="font-bold">Medicamentos:</h3><p className="whitespace-pre-wrap pl-2">{formData.medicamentos}</p></div>
+                <div><h3 className="font-bold">Exámenes de Laboratorio/Gabinete:</h3><p className="whitespace-pre-wrap pl-2">{formData.examenes}</p></div>
+                <div><h3 className="font-bold">Actividades de Enfermería:</h3><p className="whitespace-pre-wrap pl-2">{formData.actividades_enfermeria}</p></div>
+            </div>
+            <div style={{ marginTop: '100px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '50%', margin: '100px auto 0' }}>
+                <p style={{ margin: 0 }}>{formatMedicoName(cirujano)}</p>
+                <p style={{ margin: 0 }}>C.P. {cirujanoInfo?.cedula}</p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Indicaciones Postoperatorias</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <Textarea name="soluciones_dieta" label="Soluciones / Dieta" value={formData.soluciones_dieta} onChange={handleChange} rows={5} />
+                        <Textarea name="medicamentos" label="Medicamentos" value={formData.medicamentos} onChange={handleChange} rows={5} />
+                        <Textarea name="examenes" label="Exámenes de Laboratorio / Gabinete" value={formData.examenes} onChange={handleChange} rows={5} />
+                        <Textarea name="actividades_enfermeria" label="Actividades de Enfermería" value={formData.actividades_enfermeria} onChange={handleChange} rows={5} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const NotaDeAltaPage = ({ procedureId, onBack }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [formData, setFormData] = useState({
+        fecha_egreso: getTodayDateString(), dx_egreso: '', motivo_egreso: 'mejoria', resumen_egreso: '', indicaciones_egreso: ''
+    });
+    const printRef = useRef();
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            setPatient(MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente));
+            if (procData.nota_de_alta) {
+                setFormData(procData.nota_de_alta);
+            } else {
+                setFormData(prev => ({ ...prev, dx_egreso: procData.diagnostico_postqx || procData.diagnostico }));
+            }
+        }
+    }, [procedureId]);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index].nota_de_alta = formData;
+        }
+        
+        const printContent = printRef.current.innerHTML;
+        openPrintView(printContent, `Nota de Alta - ${patient.nombre}`);
+        onBack();
+    };
+
+    if (!procedure || !patient) return <LoaderCircle className="w-12 h-12 animate-spin text-blue-600" />;
+
+    const cirujano = MOCK_DATA.usuarios.find(u => u.id_usuario === procedure.id_medico);
+    const cirujanoInfo = MOCK_DATA.medicos.find(m => m.id_usuario === cirujano?.id_usuario);
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-sm leading-relaxed">
+            <div className="flex justify-between items-start pb-4 border-b">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right">
+                    <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                    <p><strong>Fecha de Ingreso:</strong> {formatDateVerbose(procedure.fecha_qx)}</p>
+                    <p><strong>Fecha de Egreso:</strong> {formatDateVerbose(formData.fecha_egreso)}</p>
+                </div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-6">Nota de Alta</h2>
+            <div className="space-y-3">
+                <p><strong>Diagnóstico de Ingreso:</strong> {procedure.diagnostico}</p>
+                <p><strong>Diagnóstico de Egreso:</strong> {formData.dx_egreso}</p>
+                <p><strong>Motivo de Egreso:</strong> {formData.motivo_egreso}</p>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Resumen Clínico:</h3><p className="whitespace-pre-wrap">{formData.resumen_egreso}</p></div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Indicaciones:</h3><p className="whitespace-pre-wrap">{formData.indicaciones_egreso}</p></div>
+            </div>
+            <div style={{ marginTop: '100px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '50%', margin: '100px auto 0' }}>
+                <p style={{ margin: 0 }}>{formatMedicoName(cirujano)}</p>
+                <p style={{ margin: 0 }}>C.P. {cirujanoInfo?.cedula}</p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota de Alta</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Fecha de Ingreso" value={formatDateVerbose(procedure.fecha_qx)} disabled />
+                            <Input name="fecha_egreso" label="Fecha de Egreso" type="date" value={formData.fecha_egreso} onChange={handleChange} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input label="Diagnóstico de Ingreso" value={procedure.diagnostico} disabled />
+                            <Input name="dx_egreso" label="Diagnóstico de Egreso" value={formData.dx_egreso} onChange={handleChange} />
+                        </div>
+                        <Select name="motivo_egreso" label="Motivo de Alta" value={formData.motivo_egreso} onChange={handleChange}>
+                            <option value="mejoria">Mejoría Clínica</option>
+                            <option value="alta_voluntaria">Alta Voluntaria</option>
+                            <option value="traslado">Traslado a otro centro</option>
+                            <option value="motivos_administrativos">Motivos Administrativos</option>
+                            <option value="alta_contra_consejo_medico">Alta contra consejo médico</option>
+                            <option value="defuncion">Defunción</option>
+                        </Select>
+                        <Textarea name="resumen_egreso" label="Resumen Clínico" value={formData.resumen_egreso} onChange={handleChange} rows={5} />
+                        <Textarea name="indicaciones_egreso" label="Indicaciones" value={formData.indicaciones_egreso} onChange={handleChange} rows={5} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const AgregarFotoPage = ({ procedureId, onBack, navigateTo }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [description, setDescription] = useState('');
+    const [imagePreview, setImagePreview] = useState(null);
+    const fileInputRef = useRef(null);
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            setPatient(MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente));
+        }
+    }, [procedureId]);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSave = (e) => {
+        e.preventDefault();
+        if (!imagePreview) {
+            console.error("Por favor, seleccione una imagen.");
+            return;
+        }
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            const newPhoto = {
+                url: imagePreview,
+                description: description,
+            };
+            if (!MOCK_DATA.procedimientos[index].fotos) {
+                MOCK_DATA.procedimientos[index].fotos = [];
+            }
+            MOCK_DATA.procedimientos[index].fotos.push(newPhoto);
+        }
+        navigateTo('procedimientoDetail', { procedureId });
+    };
+
+    if (!procedure || !patient) return <LoaderCircle className="w-12 h-12 animate-spin text-blue-600" />;
+
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Agregar Foto al Expediente</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <div
+                            className="w-full h-64 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-500 cursor-pointer hover:bg-slate-200/50"
+                            onClick={() => fileInputRef.current.click()}
+                        >
+                            {imagePreview ? (
+                                <img src={imagePreview} alt="Vista previa" className="max-h-full max-w-full object-contain rounded-md" />
+                            ) : (
+                                <span>Haz clic aquí para seleccionar una imagen</span>
+                            )}
+                        </div>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                        />
+                        <Textarea
+                            name="description"
+                            label="Descripción de la foto (opcional)"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                        />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit" disabled={!imagePreview}>Guardar Foto</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
+};
+
+const ProcedimientoDetailPage = ({ procedureId, navigateTo }) => {
+    const [procedure, setProcedure] = useState(null);
+    const [patient, setPatient] = useState(null);
+    const [medicos, setMedicos] = useState({});
+    const [showSuccess, setShowSuccess] = useState(!1);
+    const [isDocsModalOpen, setIsDocsModalOpen] = useState(!1);
+    const [editableProcedure, setEditableProcedure] = useState(null);
+
+    useEffect(() => {
+        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
+        if (procData) {
+            setProcedure(procData);
+            setEditableProcedure(procData);
+            const patData = MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente);
+            setPatient(patData);
+            setMedicos({
+                cirujano: MOCK_DATA.usuarios.find(u => u.id_usuario === procData.id_medico),
+                anestesiologo: MOCK_DATA.usuarios.find(u => u.id_usuario === procData.qx_anestesiologo),
+                ayudante: MOCK_DATA.usuarios.find(u => u.id_usuario === procData.id_ayudante),
+            })
+        }
+    }, [procedureId]);
+
+    const handleFieldChange = (e) => {
+        const { name, value } = e.target;
+        setEditableProcedure(prev => ({ ...prev, [name]: value }))
+    };
+
+    const handleSaveChanges = () => {
+        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
+        if (index !== -1) {
+            MOCK_DATA.procedimientos[index] = editableProcedure;
+            setProcedure(editableProcedure);
+            setShowSuccess(!0);
+            setTimeout(() => setShowSuccess(!1), 2000)
+        }
+    };
+
+    const handleSelectDocument = (docType) => {
+        setIsDocsModalOpen(!1);
+        navigateTo(docType, { procedureId })
+    };
+
+    if (!editableProcedure || !patient) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>
+    }
+
+    return (
+        <div>
+            <DocumentSelectionModal
+                show={isDocsModalOpen}
+                onClose={() => setIsDocsModalOpen(!1)}
+                onSelectDocument={handleSelectDocument}
+                procedure={procedure} />
+            <Button variant="secondary" onClick={() => navigateTo('programacion')} className="mb-6"><ArrowLeft className="w-4 h-4 mr-2" />Volver a Programación</Button>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1 space-y-6">
+                    <Card>
+                        <h2 className="text-xl font-bold mb-4 tracking-tight">Información del Paciente</h2>
+                        <p><strong>Nombre:</strong> {patient.nombre} {patient.apellido}</p>
+                        <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                        <p><strong>Fecha de Nacimiento:</strong> {formatDateVerbose(patient.fecha_nacimiento)}</p>
+                    </Card>
+                    <Card>
+                        <h2 className="text-xl font-bold mb-4 tracking-tight">Detalles del Procedimiento</h2>
+                        <p><strong>Diagnóstico:</strong> {procedure.diagnostico}</p>
+                        <p><strong>Cirugía Planeada:</strong> {procedure.qx_planeada}</p>
+                        <p><strong>Fecha:</strong> {formatDateVerbose(procedure.fecha_qx)}</p>
+                        <hr className="my-4 border-slate-200/80" />
+                        <p><strong>Cirujano:</strong> {formatMedicoName(medicos.cirujano)}</p>
+                        <p><strong>Anestesiólogo:</strong> {formatMedicoName(medicos.anestesiologo)}</p>
+                        <p><strong>Ayudante:</strong> {formatMedicoName(medicos.ayudante)}</p>
+                    </Card>
+                    <Card>
+                        <h2 className="text-xl font-bold mb-4 tracking-tight">Estado del Procedimiento</h2>
+                        <Select name="status" value={editableProcedure.status} onChange={handleFieldChange}>
+                            <option value="Programado">Programado</option>
+                            <option value="Post-op">Post-operatorio</option>
+                            <option value="Alta">Alta</option>
+                        </Select>
+                        <Button className="w-full mt-4" onClick={handleSaveChanges}>{showSuccess ? (<><CheckCircle className="w-5 h-5 mr-2" />Guardado</>) : ('Guardar Cambios')}</Button>
+                    </Card>
+                    <Card>
+                        <Button className="w-full" variant="secondary" onClick={() => setIsDocsModalOpen(!0)}><FileText className="w-4 h-4 mr-2" />Generar/Imprimir Documentos</Button>
+                    </Card>
+                </div>
+                <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                        <h2 className="text-xl font-bold mb-4 tracking-tight">Resumen de Notas Clínicas</h2>
+                        <div className="space-y-4">
+                            <div>
+                                <h3 className="font-semibold text-gray-800">Nota de Ingreso</h3>
+                                <p className="text-sm text-gray-600 truncate">{procedure.resumen_ingreso?.interrogatorio || 'No registrada.'}</p>
+                            </div>
+                            <hr className="border-slate-200/80" />
+                            <div>
+                                <h3 className="font-semibold text-gray-800">Nota Preanestésica</h3>
+                                <p className="text-sm text-gray-600 truncate">{procedure.notaPreanestesica?.planAnestesico?.plan || 'No registrada.'}</p>
+                            </div>
+                            <hr className="border-slate-200/80" />
+                            <div>
+                                <h3 className="font-semibold text-gray-800">Nota Postoperatoria</h3>
+                                <p className="text-sm text-gray-600 truncate">{procedure.tecnica || 'No registrada.'}</p>
+                            </div>
+                        </div>
+                    </Card>
+                    <Card>
+                        <h2 className="text-xl font-bold mb-4 tracking-tight">Galería de Fotos</h2>
+                        {procedure.fotos && procedure.fotos.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {procedure.fotos.map((foto, index) => (
+                                    <div key={index}>
+                                        <img src={foto.url} alt={foto.description || `Foto ${index + 1}`} className="rounded-lg w-full h-40 object-cover" />
+                                        <p className="text-sm text-gray-600 mt-2">{foto.description}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">No hay fotos para este procedimiento.</p>
+                        )}
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // --- MAIN APP COMPONENT ---
 const App = () => {
     const { isAuthenticated, user } = useAuth();
     const [viewState, setViewState] = useState({ current: 'programacion', params: null });
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [scriptsLoaded, setScriptsLoaded] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -933,39 +2087,6 @@ const App = () => {
     }, [user]);
 
     useEffect(() => {
-        // Load external scripts for PDF generation
-        const jspdfUrl = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-        const html2canvasUrl = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-        
-        let loadedScripts = 0;
-        const totalScripts = 2;
-
-        const onScriptLoad = () => {
-            loadedScripts++;
-            if (loadedScripts === totalScripts) {
-                console.log("PDF generation scripts loaded successfully.");
-                setScriptsLoaded(true);
-            }
-        };
-        
-        const onScriptError = (scriptName) => {
-             console.error(`${scriptName} failed to load.`);
-        }
-
-        const jspdfScript = document.createElement('script');
-        jspdfScript.src = jspdfUrl;
-        jspdfScript.async = true;
-        jspdfScript.onload = onScriptLoad;
-        jspdfScript.onerror = () => onScriptError('jsPDF');
-        document.head.appendChild(jspdfScript);
-
-        const html2canvasScript = document.createElement('script');
-        html2canvasScript.src = html2canvasUrl;
-        html2canvasScript.async = true;
-        html2canvasScript.onload = onScriptLoad;
-        html2canvasScript.onerror = () => onScriptError('html2canvas');
-        document.head.appendChild(html2canvasScript);
-        
         // Load Google Fonts
         const fontLink = document.createElement('link');
         fontLink.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
@@ -973,8 +2094,6 @@ const App = () => {
         document.head.appendChild(fontLink);
 
         return () => {
-            document.head.removeChild(jspdfScript);
-            document.head.removeChild(html2canvasScript);
             document.head.removeChild(fontLink);
         };
     }, []);
@@ -992,7 +2111,6 @@ const App = () => {
             procedureId: viewState.params?.procedureId,
             onBack: () => navigateTo('procedimientoDetail', { procedureId: viewState.params?.procedureId }),
             navigateTo: navigateTo,
-            scriptsLoaded: scriptsLoaded,
         };
 
         switch (viewState.current) {
@@ -1028,7 +2146,7 @@ const App = () => {
                         <Menu className="h-6 w-6 text-gray-600" />
                     </button>
                      <div className="flex-1 text-center">
-                        <h1 className="text-lg font-bold text-gray-800 tracking-tight">Clínica SIC</h1>
+                         <h1 className="text-lg font-bold text-gray-800 tracking-tight">Clínica SIC</h1>
                     </div>
                 </header>
                 <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
