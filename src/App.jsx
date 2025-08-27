@@ -2159,15 +2159,22 @@ const NotaPreanestesicaPage = ({ procedureId, onBack, navigateTo }) => {
     );
 };
 
+
 const NotaPostanestesicaPage = ({ procedureId, onBack, navigateTo }) => {
     const [procedure, setProcedure] = useState(null);
     const [patient, setPatient] = useState(null);
+    const [medicos, setMedicos] = useState({});
     const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState(null);
     const printRef = useRef();
 
     const defaults = {
-        tecnica_anestesica: '', liquidos: '', inicio_anestesia: '', termino_anestesia: '', inicio_cirugia: '', termino_cirugia: '',
+        tecnica_anestesica: '', 
+        liquidos: '', 
+        inicio_anestesia: '', 
+        termino_anestesia: '', 
+        inicio_cirugia: '', 
+        termino_cirugia: '',
         signosVitalesIngresoUCPA: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
         signosVitalesAltaUCPA: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
         signosVitalesAltaAnestesio: { TA: '', FC: '', FR: '', Temp: '', SatO2: '' },
@@ -2185,6 +2192,9 @@ const NotaPostanestesicaPage = ({ procedureId, onBack, navigateTo }) => {
                     const procData = data.procedure;
                     setProcedure(procData);
                     setPatient({ nombre: procData.paciente_nombre, apellido: procData.paciente_apellido, fecha_nacimiento: procData.fecha_nacimiento });
+                    setMedicos({
+                        anestesiologo: { nombre: procData.anestesiologo_nombre, apellido: procData.anestesiologo_apellido }
+                    });
 
                     const initialData = procData.nota_postanestesica || {};
                     const mergedData = { 
@@ -2240,24 +2250,125 @@ const NotaPostanestesicaPage = ({ procedureId, onBack, navigateTo }) => {
         return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
     }
 
-    // El resto del componente se mantiene igual...
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-sm leading-relaxed">
+            <div className="flex justify-between items-start pb-4 border-b">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right">
+                    <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                    <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                    <p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p>
+                </div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-6">Nota Post-Anestésica</h2>
+            <div className="space-y-4">
+                <p><strong>Técnica Anestésica:</strong> {formData.tecnica_anestesica}</p>
+                <p><strong>Líquidos Administrados:</strong> {formData.liquidos} ml</p>
+                <div className="grid grid-cols-2 gap-4">
+                    <p><strong>Inicio de Cirugía:</strong> {formData.inicio_cirugia}</p>
+                    <p><strong>Término de Cirugía:</strong> {formData.termino_cirugia}</p>
+                    <p><strong>Inicio de Anestesia:</strong> {formData.inicio_anestesia}</p>
+                    <p><strong>Término de Anestesia:</strong> {formData.termino_anestesia}</p>
+                </div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Signos Vitales al Ingreso a UCPA:</h3><p>TA: {formData.signosVitalesIngresoUCPA.TA} mmHg | FC: {formData.signosVitalesIngresoUCPA.FC} lpm | FR: {formData.signosVitalesIngresoUCPA.FR} rpm | Temp: {formData.signosVitalesIngresoUCPA.Temp} °C | SatO2: {formData.signosVitalesIngresoUCPA.SatO2} %</p></div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Signos Vitales al Alta de UCPA:</h3><p>TA: {formData.signosVitalesAltaUCPA.TA} mmHg | FC: {formData.signosVitalesAltaUCPA.FC} lpm | FR: {formData.signosVitalesAltaUCPA.FR} rpm | Temp: {formData.signosVitalesAltaUCPA.Temp} °C | SatO2: {formData.signosVitalesAltaUCPA.SatO2} %</p></div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Signos Vitales al Alta por Anestesiólogo:</h3><p>TA: {formData.signosVitalesAltaAnestesio.TA} mmHg | FC: {formData.signosVitalesAltaAnestesio.FC} lpm | FR: {formData.signosVitalesAltaAnestesio.FR} rpm | Temp: {formData.signosVitalesAltaAnestesio.Temp} °C | SatO2: {formData.signosVitalesAltaAnestesio.SatO2} %</p></div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Indicaciones al Alta:</h3><p className="whitespace-pre-wrap">{formData.indicaciones_altaAnestesio}</p></div>
+            </div>
+            <div style={{ marginTop: '100px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '50%', margin: '100px auto 0' }}>
+                <p style={{ margin: 0 }}>{formatMedicoName(medicos.anestesiologo)}</p>
+                <p style={{ margin: 0 }}>Anestesiólogo</p>
+            </div>
+        </div>
+    );
+
     return (
         <div>
-            {/* ... Contenido JSX del componente ... */}
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Post-Anestésica</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <Input id="tecnica_anestesica" label="Técnica Anestésica Empleada" value={formData.tecnica_anestesica} onChange={handleChange} />
+                        <Input id="liquidos" label="Líquidos Administrados (ml)" type="number" value={formData.liquidos} onChange={handleChange} />
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <Input id="inicio_cirugia" label="Inicio Cirugía" type="time" value={formData.inicio_cirugia} onChange={handleChange} />
+                            <Input id="termino_cirugia" label="Término Cirugía" type="time" value={formData.termino_cirugia} onChange={handleChange} />
+                            <Input id="inicio_anestesia" label="Inicio Anestesia" type="time" value={formData.inicio_anestesia} onChange={handleChange} />
+                            <Input id="termino_anestesia" label="Término Anestesia" type="time" value={formData.termino_anestesia} onChange={handleChange} />
+                        </div>
+                        
+                        <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales - Ingreso UCPA</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" label="TA" data-section="signosVitalesIngresoUCPA" value={formData.signosVitalesIngresoUCPA.TA} onChange={handleChange} />
+                                <Input name="FC" label="FC" data-section="signosVitalesIngresoUCPA" value={formData.signosVitalesIngresoUCPA.FC} onChange={handleChange} />
+                                <Input name="FR" label="FR" data-section="signosVitalesIngresoUCPA" value={formData.signosVitalesIngresoUCPA.FR} onChange={handleChange} />
+                                <Input name="Temp" label="Temp" data-section="signosVitalesIngresoUCPA" value={formData.signosVitalesIngresoUCPA.Temp} onChange={handleChange} />
+                                <Input name="SatO2" label="SatO2" data-section="signosVitalesIngresoUCPA" value={formData.signosVitalesIngresoUCPA.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+
+                         <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales - Alta UCPA</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" label="TA" data-section="signosVitalesAltaUCPA" value={formData.signosVitalesAltaUCPA.TA} onChange={handleChange} />
+                                <Input name="FC" label="FC" data-section="signosVitalesAltaUCPA" value={formData.signosVitalesAltaUCPA.FC} onChange={handleChange} />
+                                <Input name="FR" label="FR" data-section="signosVitalesAltaUCPA" value={formData.signosVitalesAltaUCPA.FR} onChange={handleChange} />
+                                <Input name="Temp" label="Temp" data-section="signosVitalesAltaUCPA" value={formData.signosVitalesAltaUCPA.Temp} onChange={handleChange} />
+                                <Input name="SatO2" label="SatO2" data-section="signosVitalesAltaUCPA" value={formData.signosVitalesAltaUCPA.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+
+                         <fieldset className="border-none p-4 rounded-lg shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff]">
+                            <legend className="text-sm font-medium text-gray-900 px-2">Signos Vitales - Alta por Anestesiólogo</legend>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-2">
+                                <Input name="TA" label="TA" data-section="signosVitalesAltaAnestesio" value={formData.signosVitalesAltaAnestesio.TA} onChange={handleChange} />
+                                <Input name="FC" label="FC" data-section="signosVitalesAltaAnestesio" value={formData.signosVitalesAltaAnestesio.FC} onChange={handleChange} />
+                                <Input name="FR" label="FR" data-section="signosVitalesAltaAnestesio" value={formData.signosVitalesAltaAnestesio.FR} onChange={handleChange} />
+                                <Input name="Temp" label="Temp" data-section="signosVitalesAltaAnestesio" value={formData.signosVitalesAltaAnestesio.Temp} onChange={handleChange} />
+                                <Input name="SatO2" label="SatO2" data-section="signosVitalesAltaAnestesio" value={formData.signosVitalesAltaAnestesio.SatO2} onChange={handleChange} />
+                            </div>
+                        </fieldset>
+
+                        <Textarea id="indicaciones_altaAnestesio" label="Indicaciones al Alta" value={formData.indicaciones_altaAnestesio} onChange={handleChange} rows={4} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
         </div>
     );
 };
 
+
 const NotaPostoperatoriaPage = ({ procedureId, onBack, navigateTo }) => {
     const [procedure, setProcedure] = useState(null);
     const [patient, setPatient] = useState(null);
+    const [medicos, setMedicos] = useState({});
     const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState(null);
     const printRef = useRef();
 
     const defaults = {
-        diagnostico_postqx: '', cirugia_realizada: '', tecnica: '', hallazgos: '', sangrado: '',
-        incidentes: 'Ninguno', complicaciones: '', cuenta_material: '', pronostico: '', recomendaciones_postop: ''
+        diagnostico_postqx: '', 
+        cirugia_realizada: '', 
+        tecnica: '', 
+        hallazgos: '', 
+        sangrado: '',
+        incidentes: 'Ninguno', 
+        complicaciones: 'Ninguna', 
+        cuenta_material: 'Completa', 
+        pronostico: 'Bueno para la vida y la función.', 
+        recomendaciones_postop: ''
     };
 
     useEffect(() => {
@@ -2271,11 +2382,18 @@ const NotaPostoperatoriaPage = ({ procedureId, onBack, navigateTo }) => {
                     const procData = data.procedure;
                     setProcedure(procData);
                     setPatient({ nombre: procData.paciente_nombre, apellido: procData.paciente_apellido, fecha_nacimiento: procData.fecha_nacimiento });
+                    setMedicos({
+                        cirujano: { nombre: procData.cirujano_nombre, apellido: procData.cirujano_apellido },
+                        anestesiologo: { nombre: procData.anestesiologo_nombre, apellido: procData.anestesiologo_apellido },
+                        ayudante: { nombre: procData.ayudante_nombre, apellido: procData.ayudante_apellido }
+                    });
+
+                    // Fusionar datos existentes con los valores por defecto
                     setFormData({
                         ...defaults,
+                        ...procData, // Cargar campos existentes como tecnica, hallazgos, etc.
                         diagnostico_postqx: procData.diagnostico_postqx || procData.diagnostico,
                         cirugia_realizada: procData.cirugia_realizada || procData.qx_planeada,
-                        ...procData // Cargar el resto de los campos si existen
                     });
                 }
             } catch (error) {
@@ -2294,6 +2412,7 @@ const NotaPostoperatoriaPage = ({ procedureId, onBack, navigateTo }) => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        // Se combinan los datos del procedimiento original con los del formulario
         const updatedProcedure = { ...procedure, ...formData };
         try {
             await fetch(`${API_URL}procedimientos.php`, {
@@ -2312,15 +2431,88 @@ const NotaPostoperatoriaPage = ({ procedureId, onBack, navigateTo }) => {
     if (loading || !formData || !patient || !procedure) {
         return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
     }
-    // ... El resto del JSX del componente ...
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-sm leading-relaxed">
+            <div className="flex justify-between items-start pb-4 border-b">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right">
+                    <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                    <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                    <p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p>
+                </div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-6">Nota Postoperatoria</h2>
+            <div className="space-y-3">
+                <p><strong>Diagnóstico Preoperatorio:</strong> {procedure.diagnostico}</p>
+                <p><strong>Diagnóstico Postoperatorio:</strong> {formData.diagnostico_postqx}</p>
+                <p><strong>Procedimiento Planeado:</strong> {procedure.qx_planeada}</p>
+                <p><strong>Procedimiento Realizado:</strong> {formData.cirugia_realizada}</p>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Descripción de la Técnica Quirúrgica:</h3><p className="whitespace-pre-wrap">{formData.tecnica}</p></div>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Hallazgos:</h3><p className="whitespace-pre-wrap">{formData.hallazgos}</p></div>
+                <p><strong>Sangrado Aproximado:</strong> {formData.sangrado} ml</p>
+                <p><strong>Incidentes:</strong> {formData.incidentes}</p>
+                <p><strong>Complicaciones:</strong> {formData.complicaciones}</p>
+                <p><strong>Cuenta de Material:</strong> {formData.cuenta_material}</p>
+                <p><strong>Pronóstico:</strong> {formData.pronostico}</p>
+                <div className="pt-2 mt-2 border-t"><h3 className="font-bold">Recomendaciones Postoperatorias:</h3><p className="whitespace-pre-wrap">{formData.recomendaciones_postop}</p></div>
+            </div>
+            <div style={{ marginTop: '100px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '50%', margin: '100px auto 0' }}>
+                <p style={{ margin: 0 }}>{formatMedicoName(medicos.cirujano)}</p>
+                <p style={{ margin: 0 }}>Cirujano / Médico Tratante</p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Nota Postoperatoria</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input id="diagnostico_postqx" label="Diagnóstico Postoperatorio" value={formData.diagnostico_postqx} onChange={handleChange} />
+                            <Input id="cirugia_realizada" label="Cirugía Realizada" value={formData.cirugia_realizada} onChange={handleChange} />
+                        </div>
+                        <Textarea id="tecnica" label="Descripción de la Técnica Quirúrgica" value={formData.tecnica} onChange={handleChange} rows={6} />
+                        <Textarea id="hallazgos" label="Hallazgos" value={formData.hallazgos} onChange={handleChange} rows={4} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Input id="sangrado" label="Sangrado (ml)" value={formData.sangrado} onChange={handleChange} />
+                            <Input id="incidentes" label="Incidentes" value={formData.incidentes} onChange={handleChange} />
+                            <Input id="complicaciones" label="Complicaciones" value={formData.complicaciones} onChange={handleChange} />
+                             <Input id="cuenta_material" label="Cuenta de Material" value={formData.cuenta_material} onChange={handleChange} />
+                        </div>
+                        <Input id="pronostico" label="Pronóstico" value={formData.pronostico} onChange={handleChange} />
+                        <Textarea id="recomendaciones_postop" label="Recomendaciones Postoperatorias" value={formData.recomendaciones_postop} onChange={handleChange} rows={4} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
 };
+
 
 const IndicacionesPostoperatoriasPage = ({ procedureId, onBack, navigateTo }) => {
     const [procedure, setProcedure] = useState(null);
     const [patient, setPatient] = useState(null);
+    const [cirujano, setCirujano] = useState(null);
     const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
-        soluciones_dieta: '', medicamentos: '', examenes: '', actividades_enfermeria: ''
+        soluciones_dieta: '', 
+        medicamentos: '', 
+        examenes: '', 
+        actividades_enfermeria: ''
     });
     const printRef = useRef();
 
@@ -2332,10 +2524,21 @@ const IndicacionesPostoperatoriasPage = ({ procedureId, onBack, navigateTo }) =>
                 const response = await fetch(`${API_URL}procedimientos.php?id_procedimiento=${procedureId}`);
                 const data = await response.json();
                 if (data.success && data.procedure) {
-                    setProcedure(data.procedure);
-                    setPatient({ nombre: data.procedure.paciente_nombre, apellido: data.procedure.paciente_apellido });
-                    if (data.procedure.indicaciones_postop) {
-                        setFormData(data.procedure.indicaciones_postop);
+                    const procData = data.procedure;
+                    setProcedure(procData);
+                    setPatient({ nombre: procData.paciente_nombre, apellido: procData.paciente_apellido, fecha_nacimiento: procData.fecha_nacimiento });
+                    setCirujano({ nombre: procData.cirujano_nombre, apellido: procData.cirujano_apellido });
+
+                    // Usar datos existentes o los valores por defecto
+                    if (procData.indicaciones_postop) {
+                        setFormData(procData.indicaciones_postop);
+                    } else {
+                        setFormData({
+                            soluciones_dieta: 'Dieta líquida por 24h, luego progresar a blanda según tolerancia.',
+                            medicamentos: 'Paracetamol 1g IV cada 8 horas.\nKetorolaco 30mg IV cada 12 horas.',
+                            examenes: 'No se requieren por el momento.',
+                            actividades_enfermeria: 'Vigilar signos vitales cada 4 horas. Curación de herida quirúrgica cada 24h. Fomentar deambulación asistida.'
+                        });
                     }
                 }
             } catch (error) {
@@ -2362,7 +2565,7 @@ const IndicacionesPostoperatoriasPage = ({ procedureId, onBack, navigateTo }) =>
                 body: JSON.stringify(updatedProcedure)
             });
             const printContent = printRef.current.innerHTML;
-            openPrintView(printContent, `Indicaciones Postoperatorias - ${patient.nombre}`);
+            openPrintView(printContent, `Indicaciones Postoperatorias - ${patient.nombre} ${patient.apellido}`);
             navigateTo('procedimientoDetail', { procedureId });
         } catch (error) {
             console.error("Error al guardar indicaciones:", error);
@@ -2372,31 +2575,103 @@ const IndicacionesPostoperatoriasPage = ({ procedureId, onBack, navigateTo }) =>
     if (loading || !procedure || !patient) {
         return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
     }
-    // ... El resto del JSX del componente ...
+
+    const PrintContent = () => (
+        <div className="p-8 bg-white text-black font-sans text-sm leading-relaxed">
+            <div className="flex justify-between items-start pb-4 border-b">
+                <div><h1 className="text-xl font-bold">Clínica SIC</h1><p>Dirección de la Clínica, Cancún, Q.Roo</p></div>
+                <div className="text-right">
+                    <p><strong>Paciente:</strong> {patient.nombre} {patient.apellido}</p>
+                    <p><strong>Edad:</strong> {calcularEdad(patient.fecha_nacimiento)} años</p>
+                    <p><strong>Fecha:</strong> {fechaCastellano(new Date())}</p>
+                </div>
+            </div>
+            <h2 className="text-lg font-bold text-center my-6">Indicaciones Médicas Postoperatorias</h2>
+            <div className="space-y-4">
+                <div><h3 className="font-bold">1. Soluciones / Alimentación:</h3><p className="whitespace-pre-wrap pl-4">{formData.soluciones_dieta}</p></div>
+                <div><h3 className="font-bold">2. Medicamentos:</h3><p className="whitespace-pre-wrap pl-4">{formData.medicamentos}</p></div>
+                <div><h3 className="font-bold">3. Exámenes de Control:</h3><p className="whitespace-pre-wrap pl-4">{formData.examenes}</p></div>
+                <div><h3 className="font-bold">4. Actividades de Enfermería:</h3><p className="whitespace-pre-wrap pl-4">{formData.actividades_enfermeria}</p></div>
+            </div>
+            <div style={{ marginTop: '150px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '50%', margin: '150px auto 0' }}>
+                <p style={{ margin: 0 }}>{formatMedicoName(cirujano)}</p>
+                <p style={{ margin: 0 }}>Cirujano / Médico Tratante</p>
+            </div>
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="hidden"><div ref={printRef}><PrintContent /></div></div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Indicaciones Postoperatorias</h1>
+                    <p className="mt-1 text-gray-600">Paciente: {patient.nombre} {patient.apellido}</p>
+                </div>
+                <Button variant="secondary" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-2" />Volver</Button>
+            </div>
+            <Card>
+                <form onSubmit={handleSave}>
+                    <div className="p-2 space-y-6">
+                        <Textarea id="soluciones_dieta" name="soluciones_dieta" label="1. Soluciones / Alimentación" value={formData.soluciones_dieta} onChange={handleChange} rows={4} />
+                        <Textarea id="medicamentos" name="medicamentos" label="2. Medicamentos" value={formData.medicamentos} onChange={handleChange} rows={6} />
+                        <Textarea id="examenes" name="examenes" label="3. Exámenes de Control" value={formData.examenes} onChange={handleChange} rows={3} />
+                        <Textarea id="actividades_enfermeria" name="actividades_enfermeria" label="4. Actividades y Cuidados de Enfermería" value={formData.actividades_enfermeria} onChange={handleChange} rows={5} />
+                    </div>
+                    <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
+                        <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
+                        <Button type="submit">Guardar y Abrir para Imprimir</Button>
+                    </div>
+                </form>
+            </Card>
+        </div>
+    );
 };
 
 
-
-
-const NotaDeAltaPage = ({ procedureId, onBack }) => {
+const NotaDeAltaPage = ({ procedureId, onBack, navigateTo }) => {
     const [procedure, setProcedure] = useState(null);
     const [patient, setPatient] = useState(null);
+    const [cirujano, setCirujano] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
-        fecha_egreso: getTodayDateString(), dx_egreso: '', motivo_egreso: 'mejoria', resumen_egreso: '', indicaciones_egreso: ''
+        fecha_egreso: getTodayDateString(), 
+        dx_egreso: '', 
+        motivo_egreso: 'mejoria', 
+        resumen_egreso: '', 
+        indicaciones_egreso: ''
     });
     const printRef = useRef();
 
     useEffect(() => {
-        const procData = MOCK_DATA.procedimientos.find(p => p.id_procedimiento === procedureId);
-        if (procData) {
-            setProcedure(procData);
-            setPatient(MOCK_DATA.pacientes.find(p => p.id_paciente === procData.id_paciente));
-            if (procData.nota_de_alta) {
-                setFormData(procData.nota_de_alta);
-            } else {
-                setFormData(prev => ({ ...prev, dx_egreso: procData.diagnostico_postqx || procData.diagnostico }));
+        const fetchDetails = async () => {
+            if (!procedureId) return;
+            setLoading(true);
+            try {
+                const response = await fetch(`${API_URL}procedimientos.php?id_procedimiento=${procedureId}`);
+                const data = await response.json();
+                if (data.success && data.procedure) {
+                    const procData = data.procedure;
+                    setProcedure(procData);
+                    setPatient({ nombre: procData.paciente_nombre, apellido: procData.paciente_apellido, fecha_nacimiento: procData.fecha_nacimiento });
+                    setCirujano({ nombre: procData.cirujano_nombre, apellido: procData.cirujano_apellido });
+
+                    if (procData.nota_de_alta) {
+                        setFormData(procData.nota_de_alta);
+                    } else {
+                        setFormData(prev => ({ 
+                            ...prev, 
+                            dx_egreso: procData.diagnostico_postqx || procData.diagnostico 
+                        }));
+                    }
+                }
+            } catch (error) {
+                console.error("Error cargando datos para nota de alta:", error);
+            } finally {
+                setLoading(false);
             }
-        }
+        };
+        fetchDetails();
     }, [procedureId]);
 
     const handleChange = (e) => {
@@ -2404,22 +2679,26 @@ const NotaDeAltaPage = ({ procedureId, onBack }) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        const index = MOCK_DATA.procedimientos.findIndex(p => p.id_procedimiento === procedureId);
-        if (index !== -1) {
-            MOCK_DATA.procedimientos[index].nota_de_alta = formData;
+        const updatedProcedure = { ...procedure, nota_de_alta: formData };
+        try {
+            await fetch(`${API_URL}procedimientos.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedProcedure)
+            });
+            const printContent = printRef.current.innerHTML;
+            openPrintView(printContent, `Nota de Alta - ${patient.nombre} ${patient.apellido}`);
+            onBack();
+        } catch (error) {
+            console.error("Error al guardar nota de alta:", error);
         }
-        
-        const printContent = printRef.current.innerHTML;
-        openPrintView(printContent, `Nota de Alta - ${patient.nombre}`);
-        onBack();
     };
 
-    if (!procedure || !patient) return <LoaderCircle className="w-12 h-12 animate-spin text-blue-600" />;
-
-    const cirujano = MOCK_DATA.usuarios.find(u => u.id_usuario === procedure.id_medico);
-    const cirujanoInfo = MOCK_DATA.medicos.find(m => m.id_usuario === cirujano?.id_usuario);
+    if (loading || !procedure || !patient) {
+        return <div className="flex items-center justify-center h-full"><LoaderCircle className="w-12 h-12 animate-spin text-blue-600" /></div>;
+    }
 
     const PrintContent = () => (
         <div className="p-8 bg-white text-black font-sans text-sm leading-relaxed">
@@ -2441,7 +2720,7 @@ const NotaDeAltaPage = ({ procedureId, onBack }) => {
             </div>
             <div style={{ marginTop: '100px', textAlign: 'center', borderTop: '1px solid black', paddingTop: '5px', width: '50%', margin: '100px auto 0' }}>
                 <p style={{ margin: 0 }}>{formatMedicoName(cirujano)}</p>
-                <p style={{ margin: 0 }}>C.P. {cirujanoInfo?.cedula}</p>
+                <p style={{ margin: 0 }}>Cirujano / Médico Tratante</p>
             </div>
         </div>
     );
@@ -2460,14 +2739,14 @@ const NotaDeAltaPage = ({ procedureId, onBack }) => {
                 <form onSubmit={handleSave}>
                     <div className="p-2 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input label="Fecha de Ingreso" value={formatDateVerbose(procedure.fecha_qx)} disabled />
-                            <Input name="fecha_egreso" label="Fecha de Egreso" type="date" value={formData.fecha_egreso} onChange={handleChange} />
+                            <Input id="fecha_ingreso" label="Fecha de Ingreso" value={formatDateVerbose(procedure.fecha_qx)} disabled />
+                            <Input id="fecha_egreso" name="fecha_egreso" label="Fecha de Egreso" type="date" value={formData.fecha_egreso} onChange={handleChange} />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Input label="Diagnóstico de Ingreso" value={procedure.diagnostico} disabled />
-                            <Input name="dx_egreso" label="Diagnóstico de Egreso" value={formData.dx_egreso} onChange={handleChange} />
+                            <Input id="dx_ingreso" label="Diagnóstico de Ingreso" value={procedure.diagnostico} disabled />
+                            <Input id="dx_egreso" name="dx_egreso" label="Diagnóstico de Egreso" value={formData.dx_egreso} onChange={handleChange} />
                         </div>
-                        <Select name="motivo_egreso" label="Motivo de Alta" value={formData.motivo_egreso} onChange={handleChange}>
+                        <Select id="motivo_egreso" name="motivo_egreso" label="Motivo de Alta" value={formData.motivo_egreso} onChange={handleChange}>
                             <option value="mejoria">Mejoría Clínica</option>
                             <option value="alta_voluntaria">Alta Voluntaria</option>
                             <option value="traslado">Traslado a otro centro</option>
@@ -2475,8 +2754,8 @@ const NotaDeAltaPage = ({ procedureId, onBack }) => {
                             <option value="alta_contra_consejo_medico">Alta contra consejo médico</option>
                             <option value="defuncion">Defunción</option>
                         </Select>
-                        <Textarea name="resumen_egreso" label="Resumen Clínico" value={formData.resumen_egreso} onChange={handleChange} rows={5} />
-                        <Textarea name="indicaciones_egreso" label="Indicaciones" value={formData.indicaciones_egreso} onChange={handleChange} rows={5} />
+                        <Textarea id="resumen_egreso" name="resumen_egreso" label="Resumen Clínico" value={formData.resumen_egreso} onChange={handleChange} rows={5} />
+                        <Textarea id="indicaciones_egreso" name="indicaciones_egreso" label="Indicaciones" value={formData.indicaciones_egreso} onChange={handleChange} rows={5} />
                     </div>
                     <div className="p-4 mt-4 bg-slate-100/80 -m-6 mb-0 rounded-b-lg flex justify-end gap-3">
                         <Button type="button" variant="secondary" onClick={onBack}>Cancelar</Button>
