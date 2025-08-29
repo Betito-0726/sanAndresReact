@@ -677,24 +677,16 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
         setLoading(true);
         try {
             const response = await fetch(`${API_URL}procedimientos.php?fecha_qx=${date}`);
-            const clonedResponse = response.clone();
-            try {
-                const data = await response.json();
-                if (data.success) {
-                    console.log("Datos recibidos:", data.procedimientos);
-                    setProcedimientos(data.procedimientos || []);
-                } else {
-                    console.error("Error reportado por el API:", data.message);
-                    setProcedimientos([]);
-                }
-            } catch (jsonError) {
-                console.error("La respuesta del servidor no es un JSON válido.");
-                const errorText = await clonedResponse.text();
-                console.error("Respuesta del servidor (error PHP):", errorText);
+            const data = await response.json();
+            if (data.success) {
+                setProcedimientos(data.procedimientos || []);
+            } else {
+                console.error("Error reportado por el API:", data.message);
                 setProcedimientos([]);
             }
         } catch (networkError) {
             console.error("Error de red o conexión al obtener procedimientos:", networkError);
+            setProcedimientos([]);
         } finally {
             setLoading(false);
         }
@@ -824,28 +816,25 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                         />
                         <Button variant="secondary" onClick={() => handleDateChange(1)} aria-label="Día siguiente" className="!p-2.5 !rounded-full !shadow-none"><ChevronRight className="h-5 w-5" /></Button>
                     </div>
-                    <Button onClick={() => { setSelectedProcedure(null); setIsAgendaModalOpen(true); }} className="w-full sm:w-auto">
-                        <PlusCircle className="w-5 h-5 mr-2" />
-                        Agendar Cirugía
-                    </Button>
+                    {canManage && (
+                        <Button onClick={() => { setSelectedProcedure(null); setIsAgendaModalOpen(true); }} className="w-full sm:w-auto">
+                            <PlusCircle className="w-5 h-5 mr-2" />
+                            Agendar Cirugía
+                        </Button>
+                    )}
                 </div>
             </div>
 
-            {/* --- BLOQUE DE RENDERIZADO CORREGIDO --- */}
             {/* Responsive View: Cards for Mobile */}
             <div className="md:hidden mt-6 space-y-4">
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <Card key={i}>
-                            <SkeletonLoader className="h-5 w-3/4 mb-2" />
-                            <SkeletonLoader className="h-4 w-1/2 mb-4" />
-                            <SkeletonLoader className="h-4 w-full" />
-                        </Card>
+                        <Card key={i}><SkeletonLoader className="h-24 w-full" /></Card>
                     ))
                 ) : procedimientos.length > 0 ? (
                     procedimientos.map(proc => (
-                        <Card key={proc.id_procedimiento} className="!p-0 overflow-hidden" onClick={() => onSelectProcedure(proc.id_procedimiento, 'procedimientoDetail')}>
-                            <div className="p-4">
+                        <Card key={proc.id_procedimiento} className="!p-0">
+                            <div className="p-4 cursor-pointer" onClick={() => onSelectProcedure(proc.id_procedimiento, 'procedimientoDetail')}>
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="font-bold text-gray-900">{proc.paciente_nombre_completo}</p>
@@ -876,6 +865,7 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                 )}
             </div>
 
+
             {/* Desktop View: Table */}
             <div className="hidden md:block mt-8">
                 <Card>
@@ -884,7 +874,7 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                             <thead>
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedimiento Planeado</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedimiento</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cirujano</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anestesiólogo</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ayudante</th>
@@ -894,15 +884,11 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                             </thead>
                             <tbody className="divide-y divide-slate-200/80">
                                 {loading ? (
-                                    Array.from({ length: 2 }).map((_, i) => (
+                                    Array.from({ length: 3 }).map((_, i) => (
                                         <tr key={i}>
-                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-40" /></td>
-                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-48" /></td>
-                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-32" /></td>
-                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-32" /></td>
-                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-32" /></td>
-                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-24" /></td>
-                                            {canManage && <td className="px-6 py-4"><SkeletonLoader className="h-4 w-12" /></td>}
+                                            {Array.from({ length: canManage ? 7 : 6 }).map((_, j) => (
+                                                <td key={j} className="px-6 py-4"><SkeletonLoader className="h-4 w-full" /></td>
+                                            ))}
                                         </tr>
                                     ))
                                 ) : procedimientos.length > 0 ? (
@@ -944,7 +930,23 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
 
 const ActionsDropdown = ({ onEdit, onDelete, onDocs, onAddPhoto }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isFlipped, setIsFlipped] = useState(false);
     const ref = useRef(null);
+
+    const toggleDropdown = () => {
+        if (!isOpen && ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            // Altura aproximada del dropdown (56px/item * 4 items) + padding
+            const dropdownHeight = 200;
+            if (window.innerHeight - rect.bottom < dropdownHeight) {
+                setIsFlipped(true);
+            } else {
+                setIsFlipped(false);
+            }
+        }
+        setIsOpen(!isOpen);
+    };
+
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -956,16 +958,18 @@ const ActionsDropdown = ({ onEdit, onDelete, onDocs, onAddPhoto }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [ref]);
 
+    const dropdownClasses = `origin-top-right absolute right-0 w-56 rounded-xl shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff] bg-slate-100 ring-1 ring-black ring-opacity-5 z-50 ${isFlipped ? 'bottom-full mb-2 origin-bottom-right' : 'mt-2 origin-top-right'}`;
+
     return (
         <div className="relative inline-block text-left" ref={ref}>
             <div>
-                <button onClick={() => setIsOpen(!isOpen)} type="button" className="inline-flex justify-center w-full rounded-md p-2 bg-slate-100 text-sm font-medium text-gray-700 hover:bg-slate-200 shadow-[3px_3px_6px_#d1d9e6,-3px_-3px_6px_#ffffff] active:shadow-[inset_3px_3px_6px_#d1d9e6,inset_-3px_-3px_6px_#ffffff] transition-all duration-200">
+                <button onClick={toggleDropdown} type="button" className="inline-flex justify-center w-full rounded-md p-2 bg-slate-100 text-sm font-medium text-gray-700 hover:bg-slate-200 shadow-[3px_3px_6px_#d1d9e6,-3px_-3px_6px_#ffffff] active:shadow-[inset_3px_3px_6px_#d1d9e6,inset_-3px_-3px_6px_#ffffff] transition-all duration-200">
                     <MoreVertical className="h-5 w-5" />
                 </button>
             </div>
 
             {isOpen && (
-                <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-[5px_5px_10px_#d1d9e6,-5px_-5px_10px_#ffffff] bg-slate-100 ring-1 ring-black ring-opacity-5 z-50">
+                <div className={dropdownClasses}>
                     <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                         <a href="#" onClick={(e) => { e.preventDefault(); onEdit(); setIsOpen(false); }} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-slate-200/60 rounded-t-lg" role="menuitem">
                             <Edit className="mr-3 h-5 w-5 text-gray-400" />
@@ -989,8 +993,6 @@ const ActionsDropdown = ({ onEdit, onDelete, onDocs, onAddPhoto }) => {
         </div>
     );
 };
-
-
 
 
 // --- COMPONENTE MODAL PARA PACIENTES ---
@@ -3197,7 +3199,7 @@ const App = () => {
             case 'programacion': return <ProgramacionDiaPage onSelectProcedure={(id, targetView = 'procedimientoDetail') => navigateTo(targetView, { procedureId: id })} />;
             case 'pacientes': return <PacientesPage onSelectProcedure={(id) => navigateTo('procedimientoDetail', { procedureId: id })} />;
             case 'usuarios': return <UsuariosPage />;
-            case 'procedimientoDetail': return <ProcedimientoDetailPage procedureId={viewState.params.procedureId} navigateTo={navigateTo} />;
+            case 'procedimientoDetail': return <cc procedureId={viewState.params.procedureId} navigateTo={navigateTo} />;
             case 'notaIngreso': return <NotaIngresoPage {...commonProps} />;
             case 'consentimientoQuirurgico': return <ConsentimientoQuirurgicoPage {...commonProps} />;
             case 'consentimientoAnestesico': return <ConsentimientoAnestesicoPage {...commonProps} />;
