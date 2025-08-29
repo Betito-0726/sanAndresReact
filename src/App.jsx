@@ -13,6 +13,7 @@ import {
 //const API_URL = 'http://localhost/server/'; // <-- ¡IMPORTANTE: AJUSTA ESTA LÍNEA!
 
 const API_URL = 'https://monediumwallet.com/backend/';
+
 // --- UTILITY FUNCTIONS ---
 const getTodayDateString = () => {
     const today = new Date();
@@ -1067,7 +1068,7 @@ const PacienteModal = ({ show, onClose, onSave, patientData }) => {
     );
 };
 
-// --- PÁGINA DE GESTIÓN DE PACIENTES ---
+// --- PÁGINA DE GESTIÓN DE PACIENTES (CONECTADA A API) ---
 const PacientesPage = ({ onSelectProcedure }) => {
     const { user } = useAuth();
     const [pacientes, setPacientes] = useState([]);
@@ -1078,42 +1079,52 @@ const PacientesPage = ({ onSelectProcedure }) => {
     const [editingPatient, setEditingPatient] = useState(null);
     const itemsPerPage = 10;
 
-    // TODO: Reemplazar MOCK_DATA con llamadas a la API
-    const MOCK_DATA = { pacientes: [], procedimientos: [] }; 
-
-    const fetchPacientes = () => {
+    const fetchPacientes = async () => {
         setLoading(true);
-        // Simulación de llamada a la API
-        setTimeout(() => {
-            let fetchedPacientes = MOCK_DATA.pacientes;
-            if (user.privilegios === 'Medico') {
-                const involvedPatientIds = new Set(
-                    MOCK_DATA.procedimientos
-                        .filter(p => p.id_medico === user.id_usuario || p.qx_anestesiologo === user.id_usuario || p.id_ayudante === user.id_usuario)
-                        .map(p => p.id_paciente)
-                );
-                fetchedPacientes = MOCK_DATA.pacientes.filter(p => involvedPatientIds.has(p.id_paciente));
+        try {
+            // Si el usuario es médico, se añade su ID a la URL para filtrar
+            const url = user.privilegios === 'Medico'
+                ? `${API_URL}pacientes.php?id_usuario=${user.id_usuario}`
+                : `${API_URL}pacientes.php`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success) {
+                setPacientes(data.pacientes || []);
+            } else {
+                console.error("Error al cargar pacientes:", data.message);
+                setPacientes([]);
             }
-            setPacientes(fetchedPacientes);
+        } catch (error) {
+            console.error("Error de red al cargar pacientes:", error);
+            setPacientes([]);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
     };
 
     useEffect(() => {
         fetchPacientes();
     }, [user]);
 
-    const handleSavePatient = (patientData) => {
-        // TODO: Reemplazar con llamada a la API (POST o PUT)
-        if (editingPatient) {
-            const index = MOCK_DATA.pacientes.findIndex(p => p.id_paciente === patientData.id_paciente);
-            if (index !== -1) {
-                MOCK_DATA.pacientes[index] = { ...MOCK_DATA.pacientes[index], ...patientData };
+    const handleSavePatient = async (patientData) => {
+        try {
+            const response = await fetch(`${API_URL}pacientes.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(patientData)
+            });
+            const result = await response.json();
+            if (result.success) {
+                fetchPacientes(); // Recargar la lista de pacientes
+            } else {
+                alert("Error al guardar: " + (result.message || 'Error desconocido'));
             }
-        } else {
-            MOCK_DATA.pacientes.push(patientData);
+        } catch (error) {
+            console.error("Error de red al guardar paciente:", error);
+            alert("Error de conexión al guardar el paciente.");
         }
-        fetchPacientes(); // Refrescar la lista
     };
 
     const handleOpenModal = (patient = null) => {
@@ -1192,16 +1203,9 @@ const PacientesPage = ({ onSelectProcedure }) => {
                                 ))
                             ) : (
                                 currentItems.map(paciente => (
-                                    <tr
-                                        key={paciente.id_paciente}
-                                        className="hover:bg-slate-200/50 cursor-pointer"
-                                        onClick={() => {
-                                            const proc = MOCK_DATA.procedimientos.find(p => p.id_paciente === paciente.id_paciente);
-                                            if (proc) onSelectProcedure(proc.id_procedimiento);
-                                        }}
-                                    >
+                                    <tr key={paciente.id_paciente} className="hover:bg-slate-200/50">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{paciente.nombre} {paciente.apellido}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{/* formatDateVerbose(paciente.fecha_nacimiento) */} {paciente.fecha_nacimiento}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDateVerbose(paciente.fecha_nacimiento)}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{paciente.telefono}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button
@@ -1240,7 +1244,6 @@ const PacientesPage = ({ onSelectProcedure }) => {
             </Card>
         </div>
     );
-};
 
 const UsuarioModal = ({ show, onClose, onSave, userData }) => {
     const isEditing = !!userData?.id_usuario;
