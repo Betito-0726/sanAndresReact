@@ -12,7 +12,7 @@ import {
 // Para producción en HostPapa, será tu dominio: 'https://tudominio.com/api/'
 //const API_URL = 'http://localhost/server/'; // <-- ¡IMPORTANTE: AJUSTA ESTA LÍNEA!
 
-const API_URL = 'https://monediumwallet.com/server/';
+const API_URL = 'https://monediumwallet.com/backend/';
 // --- UTILITY FUNCTIONS ---
 const getTodayDateString = () => {
     const today = new Date();
