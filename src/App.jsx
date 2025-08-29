@@ -677,16 +677,24 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
         setLoading(true);
         try {
             const response = await fetch(`${API_URL}procedimientos.php?fecha_qx=${date}`);
-            const data = await response.json();
-            if (data.success) {
-                setProcedimientos(data.procedimientos || []);
-            } else {
-                console.error("Error reportado por el API:", data.message);
+            const clonedResponse = response.clone();
+            try {
+                const data = await response.json();
+                if (data.success) {
+                    console.log("Datos recibidos:", data.procedimientos);
+                    setProcedimientos(data.procedimientos || []);
+                } else {
+                    console.error("Error reportado por el API:", data.message);
+                    setProcedimientos([]);
+                }
+            } catch (jsonError) {
+                console.error("La respuesta del servidor no es un JSON válido.");
+                const errorText = await clonedResponse.text();
+                console.error("Respuesta del servidor (error PHP):", errorText);
                 setProcedimientos([]);
             }
         } catch (networkError) {
             console.error("Error de red o conexión al obtener procedimientos:", networkError);
-            setProcedimientos([]);
         } finally {
             setLoading(false);
         }
@@ -816,25 +824,28 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                         />
                         <Button variant="secondary" onClick={() => handleDateChange(1)} aria-label="Día siguiente" className="!p-2.5 !rounded-full !shadow-none"><ChevronRight className="h-5 w-5" /></Button>
                     </div>
-                    {canManage && (
-                        <Button onClick={() => { setSelectedProcedure(null); setIsAgendaModalOpen(true); }} className="w-full sm:w-auto">
-                            <PlusCircle className="w-5 h-5 mr-2" />
-                            Agendar Cirugía
-                        </Button>
-                    )}
+                    <Button onClick={() => { setSelectedProcedure(null); setIsAgendaModalOpen(true); }} className="w-full sm:w-auto">
+                        <PlusCircle className="w-5 h-5 mr-2" />
+                        Agendar Cirugía
+                    </Button>
                 </div>
             </div>
 
+            {/* --- BLOQUE DE RENDERIZADO CORREGIDO --- */}
             {/* Responsive View: Cards for Mobile */}
             <div className="md:hidden mt-6 space-y-4">
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                        <Card key={i}><SkeletonLoader className="h-24 w-full" /></Card>
+                        <Card key={i}>
+                            <SkeletonLoader className="h-5 w-3/4 mb-2" />
+                            <SkeletonLoader className="h-4 w-1/2 mb-4" />
+                            <SkeletonLoader className="h-4 w-full" />
+                        </Card>
                     ))
                 ) : procedimientos.length > 0 ? (
                     procedimientos.map(proc => (
-                        <Card key={proc.id_procedimiento} className="!p-0">
-                            <div className="p-4 cursor-pointer" onClick={() => onSelectProcedure(proc.id_procedimiento, 'procedimientoDetail')}>
+                        <Card key={proc.id_procedimiento} className="!p-0 overflow-hidden" onClick={() => onSelectProcedure(proc.id_procedimiento, 'procedimientoDetail')}>
+                            <div className="p-4">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <p className="font-bold text-gray-900">{proc.paciente_nombre_completo}</p>
@@ -865,7 +876,6 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                 )}
             </div>
 
-
             {/* Desktop View: Table */}
             <div className="hidden md:block mt-8">
                 <Card>
@@ -874,7 +884,7 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                             <thead>
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedimiento</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Procedimiento Planeado</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cirujano</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anestesiólogo</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ayudante</th>
@@ -884,11 +894,15 @@ const ProgramacionDiaPage = ({ onSelectProcedure }) => {
                             </thead>
                             <tbody className="divide-y divide-slate-200/80">
                                 {loading ? (
-                                    Array.from({ length: 3 }).map((_, i) => (
+                                    Array.from({ length: 2 }).map((_, i) => (
                                         <tr key={i}>
-                                            {Array.from({ length: canManage ? 7 : 6 }).map((_, j) => (
-                                                <td key={j} className="px-6 py-4"><SkeletonLoader className="h-4 w-full" /></td>
-                                            ))}
+                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-40" /></td>
+                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-48" /></td>
+                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-32" /></td>
+                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-32" /></td>
+                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-32" /></td>
+                                            <td className="px-6 py-4"><SkeletonLoader className="h-4 w-24" /></td>
+                                            {canManage && <td className="px-6 py-4"><SkeletonLoader className="h-4 w-12" /></td>}
                                         </tr>
                                     ))
                                 ) : procedimientos.length > 0 ? (
@@ -3199,7 +3213,7 @@ const App = () => {
             case 'programacion': return <ProgramacionDiaPage onSelectProcedure={(id, targetView = 'procedimientoDetail') => navigateTo(targetView, { procedureId: id })} />;
             case 'pacientes': return <PacientesPage onSelectProcedure={(id) => navigateTo('procedimientoDetail', { procedureId: id })} />;
             case 'usuarios': return <UsuariosPage />;
-            case 'procedimientoDetail': return <cc procedureId={viewState.params.procedureId} navigateTo={navigateTo} />;
+            case 'procedimientoDetail': return <ProcedimientoDetailPage procedureId={viewState.params.procedureId} navigateTo={navigateTo} />;
             case 'notaIngreso': return <NotaIngresoPage {...commonProps} />;
             case 'consentimientoQuirurgico': return <ConsentimientoQuirurgicoPage {...commonProps} />;
             case 'consentimientoAnestesico': return <ConsentimientoAnestesicoPage {...commonProps} />;
