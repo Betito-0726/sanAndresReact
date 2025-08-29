@@ -10,8 +10,9 @@ import {
 // Cambia esta URL a la ubicación de tu carpeta 'api' en el servidor.
 // Para desarrollo local con AMPPS, podría ser: 'http://localhost/api/'
 // Para producción en HostPapa, será tu dominio: 'https://tudominio.com/api/'
-const API_URL = 'http://localhost/server/'; // <-- ¡IMPORTANTE: AJUSTA ESTA LÍNEA!
+//const API_URL = 'http://localhost/server/'; // <-- ¡IMPORTANTE: AJUSTA ESTA LÍNEA!
 
+const API_URL = 'https://monediumwallet.com/server/';
 // --- UTILITY FUNCTIONS ---
 const getTodayDateString = () => {
     const today = new Date();
@@ -1242,7 +1243,7 @@ const PacientesPage = ({ onSelectProcedure }) => {
 };
 
 const UsuarioModal = ({ show, onClose, onSave, userData }) => {
-    const isEditing = !!userData;
+    const isEditing = !!userData?.id_usuario;
     const initialFormState = {
         nombre: '',
         apellido: '',
@@ -1265,7 +1266,7 @@ const UsuarioModal = ({ show, onClose, onSave, userData }) => {
                     email: userData.email || '',
                     telefono: userData.telefono || '',
                     privilegios: userData.privilegios || 'Medico',
-                    password: '', // Password field is cleared for security
+                    password: '', // El campo de contraseña se vacía por seguridad al editar
                 });
             } else {
                 setFormData(initialFormState);
@@ -1281,16 +1282,22 @@ const UsuarioModal = ({ show, onClose, onSave, userData }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        const userPayload = isEditing 
-            ? { ...userData, ...formData } 
-            : { id_usuario: Date.now(), id_hospital: 1, ...formData };
+        let userPayload;
+        if (isEditing) {
+            // Al editar, se combinan los datos existentes con los del formulario
+            userPayload = { ...userData, ...formData };
+        } else {
+            // **CORRECCIÓN CLAVE**: Al crear, NO se envía un 'id_usuario'.
+            // La base de datos se encargará de generarlo automáticamente.
+            userPayload = { ...formData, id_hospital: 1 };
+        }
 
         if (!isEditing && !userPayload.password) {
-            console.error("La contraseña es obligatoria para nuevos usuarios.");
+            alert("La contraseña es obligatoria para nuevos usuarios.");
             return;
         }
 
-        // If editing and password is not changed, don't send it
+        // Si se está editando y no se ha introducido una nueva contraseña, se elimina del envío
         if (isEditing && !userPayload.password) {
             delete userPayload.password;
         }
@@ -1502,6 +1509,7 @@ const UsuariosPage = () => {
         </div>
     );
 };
+
 
 const NotaIngresoPage = ({ procedureId, onBack, navigateTo }) => {
     const [procedure, setProcedure] = useState(null);
